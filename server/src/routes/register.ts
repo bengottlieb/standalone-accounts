@@ -3,6 +3,7 @@ import { acctErrorHandler } from '../http/errors.js'
 import { acctAccountRoutes } from './account-routes.js'
 import { acctAdminRoutes } from './admin-routes.js'
 import { acctAuthRoutes } from './auth-routes.js'
+import { signInRoutes } from './sign-in-routes.js'
 import { checkInRoute, type CheckInOptions } from './check-in-route.js'
 import type { AcctAdminOptions, AcctRouteOptions } from './options.js'
 
@@ -18,6 +19,7 @@ export async function registerAccountRoutes(
 	await app.register(async (scope) => {
 		scope.setErrorHandler(acctErrorHandler)
 		acctAuthRoutes(scope, options)
+		signInRoutes(scope, options)
 		acctAccountRoutes(scope, options)
 		checkInRoute(scope, options, options.checkIn)
 	})

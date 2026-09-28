@@ -37,7 +37,7 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				if (identity.appTransactionId) await lockIdentity(trx, `app_transaction:${identity.appTransactionId}`)
 				const found = await findAccount(trx, identity)
 				if (!found && config.creation === 'trigger') return null
-				const accountId = found?.accountId ?? (await createAccount(trx, config, 'device', 'first-launch')).id
+				const accountId = found?.accountId ?? (await createAccount(trx, config, 'device', 'first-launch', o.hooks)).id
 				await bindDevice(trx, accountId, identity)
 				return { accountId, isNew: !found }
 			})

@@ -7,6 +7,8 @@ import type { AcctDb } from '../../src/db/tables.js'
 import { HttpError } from '../../src/http/errors.js'
 import { registerAccountAdminRoutes, registerAccountRoutes } from '../../src/routes/register.js'
 import type { CheckInOptions } from '../../src/routes/check-in-route.js'
+import type { AcctHooks } from '../../src/core/hooks.js'
+import type { SignInOptions } from '../../src/signin/options.js'
 import { BUNDLE_ID, TEST_APP_APPLE_ID, testRoot } from './storekit.js'
 
 export const TEST_SECRET = 'x'.repeat(32)
@@ -38,6 +40,8 @@ export interface HostOptions {
 	appStore?: AppStoreVerifier
 	storeApi?: StoreApi | null
 	checkIn?: Partial<CheckInOptions>
+	signIn?: SignInOptions
+	hooks?: AcctHooks
 }
 
 /**
@@ -61,6 +65,8 @@ export async function testHost(db: AcctDb, o: HostOptions = {}): Promise<Fastify
 		config,
 		appStore: o.appStore ?? testVerifier(),
 		authRouteConfig: {},
+		signIn: o.signIn,
+		hooks: o.hooks,
 		checkIn: { protocolVersions: ['v1'], builds: () => null, ...o.checkIn },
 	})
 	await registerAccountAdminRoutes(app, {

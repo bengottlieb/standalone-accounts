@@ -164,6 +164,22 @@ export interface AcctStoreNotificationsTable {
 	error: string | null
 }
 
+export interface AcctPasswordsTable {
+	account_id: string
+	email: string
+	password_hash: string
+	created_at: DefaultTimestamp
+	updated_at: DefaultTimestamp
+}
+
+export interface AcctPasswordResetsTable {
+	code_hash: string
+	account_id: string
+	expires_at: Timestamp
+	used_at: Timestamp | null
+	created_at: DefaultTimestamp
+}
+
 export interface AcctTables {
 	acct_plans: AcctPlansTable
 	acct_accounts: AcctAccountsTable
@@ -177,6 +193,8 @@ export interface AcctTables {
 	acct_claim_codes: AcctClaimCodesTable
 	acct_events: AcctEventsTable
 	acct_store_notifications: AcctStoreNotificationsTable
+	acct_passwords: AcctPasswordsTable
+	acct_password_resets: AcctPasswordResetsTable
 }
 
 /** The library's view of the host's database (or a transaction on it). */

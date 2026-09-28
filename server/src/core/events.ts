@@ -20,6 +20,10 @@ export type EventKind =
 	| 'note'
 	| 'ticket'
 	| 'signed_out'
+	| 'signed_in'
+	| 'merged'
+	| 'password_changed'
+	| 'unlinked'
 	| 'deleted'
 
 /** Appends to the account's timeline (the admin audit log and support history). */

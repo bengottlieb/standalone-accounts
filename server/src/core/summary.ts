@@ -2,8 +2,33 @@ import type { AcctDb } from '../db/tables.js'
 import type { AccountSummary } from '../routes/contract.js'
 import { LIVE_STATUSES } from '../db/tables.js'
 
+/** How the account can be signed in to: its password (labelled with the email) and its sign-in links. */
+export async function signInIdentities(db: AcctDb, accountId: string, kinds: string[]) {
+	const [password, links, labels] = await Promise.all([
+		db.selectFrom('acct_passwords').select('email').where('account_id', '=', accountId).executeTakeFirst(),
+		db
+			.selectFrom('acct_links')
+			.select('kind')
+			.where('account_id', '=', accountId)
+			.where('kind', 'in', kinds)
+			.orderBy('created_at')
+			.execute(),
+		db
+			.selectFrom('acct_hints')
+			.select(['kind', 'value'])
+			.where('account_id', '=', accountId)
+			.where('kind', 'like', '%\\_label')
+			.execute(),
+	])
+	const label = (kind: string) => labels.find((l) => l.kind === `${kind}_label`)?.value
+	return [
+		...(password ? [{ kind: 'password', label: password.email }] : []),
+		...links.map((l) => ({ kind: l.kind, ...(label(l.kind) ? { label: label(l.kind) } : {}) })),
+	]
+}
+
 /** The account as its devices see it (docs/DESIGN.md "Protocol"). Dates stay `Date`s; Fastify serializes them. */
-export async function accountSummary(db: AcctDb, accountId: string) {
+export async function accountSummary(db: AcctDb, accountId: string, kinds: string[] = ['apple', 'game_center']) {
 	const a = await db.selectFrom('acct_accounts').selectAll().where('id', '=', accountId).executeTakeFirstOrThrow()
 	const access = {
 		status: a.status,
@@ -14,5 +39,6 @@ export async function accountSummary(db: AcctDb, accountId: string) {
 		...(a.access_expires_at ? { expiresAt: a.access_expires_at } : {}),
 		...(a.access_will_renew !== null ? { willRenew: a.access_will_renew } : {}),
 	}
-	return { id: a.id, supportID: a.support_id, createdAt: a.created_at, access } as unknown as AccountSummary
+	const identities = await signInIdentities(db, accountId, kinds)
+	return { id: a.id, supportID: a.support_id, createdAt: a.created_at, access, identities } as unknown as AccountSummary
 }

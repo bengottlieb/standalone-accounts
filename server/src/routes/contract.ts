@@ -51,13 +51,50 @@ export const accessSchema = z.object({
 	willRenew: z.boolean().optional(),
 })
 
+export const signInIdentitySchema = z.object({ kind: z.string(), label: z.string().optional() })
+
 export const accountSummarySchema = z.object({
 	id: z.string().meta({ format: 'uuid' }),
 	supportID: z.string(),
 	createdAt: dateTime,
 	access: accessSchema,
+	identities: z.array(signInIdentitySchema),
 })
 export type AccountSummary = z.infer<typeof accountSummarySchema>
 
-export const authResponseSchema = z.object({ account: accountSummarySchema, token: z.string(), isNew: z.boolean() })
+export const authResponseSchema = z.object({
+	account: accountSummarySchema,
+	token: z.string(),
+	isNew: z.boolean(),
+	merged: z.boolean().optional(),
+})
+
+const email = z.email().max(320)
+const password = z.string().min(8).max(200)
+export const appleSignInBody = z.object({
+	identity: identitySchema,
+	identityToken: z.string().min(1).max(10_000),
+	name: z.string().max(200).optional(),
+})
+export const passwordBody = z.object({ identity: identitySchema, email, password })
+export const forgotPasswordBody = z.object({ email })
+export const resetPasswordBody = z.object({
+	identity: identitySchema,
+	email,
+	code: z.string().min(1).max(20),
+	password,
+})
+export const gameCenterBody = z.object({
+	identity: identitySchema,
+	teamPlayerID: z.string().min(1).max(200),
+	bundleID: z.string().min(1).max(200),
+	publicKeyURL: z.url().max(500),
+	signature: z.string().min(1).max(4_000),
+	salt: z.string().min(1).max(200),
+	/** Milliseconds since the epoch, as GameKit reports it. */
+	timestamp: z.number().int(),
+	displayName: z.string().max(200).optional(),
+})
+export const setPasswordBody = z.object({ email, password, currentPassword: z.string().max(200).optional() })
+export const unlinkBody = z.object({ kind: z.string().min(1).max(50) })
 export const deviceAuthResponseSchema = z.union([authResponseSchema, z.object({ account: z.null() })])

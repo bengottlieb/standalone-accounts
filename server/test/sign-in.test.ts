@@ -1,0 +1,205 @@
+import type { FastifyInstance } from 'fastify'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { claimHostIdentity } from '../src/core/sign-in.js'
+import { reset, testDb } from './support/db.js'
+import { CONFIG, testHost } from './support/host.js'
+import { identity } from './support/identity.js'
+import { appleToken, gameCenterProof, recordingHooks, testSignIn } from './support/sign-in.js'
+import { LIFETIME, signJws, transaction } from './support/storekit.js'
+
+describe('sign-in methods', () => {
+	const db = testDb()
+	let app: FastifyInstance
+	let mailbox: { email: string; code: string }[]
+	let calls: string[]
+
+	const host = async (creation: 'trigger' | 'first-launch' = 'first-launch') => {
+		const s = testSignIn()
+		const r = recordingHooks()
+		mailbox = s.mailbox
+		calls = r.calls
+		app = await testHost(db, { config: { creation }, signIn: s.signIn, hooks: r.hooks })
+	}
+	beforeEach(async () => {
+		await reset(db)
+		await host()
+	})
+
+	const post = (url: string, payload: object, headers: Record<string, string> = {}) =>
+		app.inject({ method: 'POST', url, payload, headers })
+	const apple = (id: object, sub: string, email?: string) =>
+		post('/api/accounts/v1/auth/apple', { identity: id, identityToken: appleToken(sub, email), name: 'Ben' })
+	const password = (path: string, id: object, email: string, pw: string) =>
+		post(`/api/accounts/v1/auth/password/${path}`, { identity: id, email, password: pw })
+	const launch = async (id: object) => (await post('/api/accounts/v1/auth/device', { identity: id })).json()
+	const bearer = (token: string) => ({ authorization: `Bearer ${token}` })
+
+	it('attaches Apple to the device’s anonymous account, then finds it from another device', async () => {
+		const phone = identity()
+		const first = await launch(phone)
+		const signedIn = (await apple(phone, 'apple-1', 'ben@icloud.com')).json()
+		expect(signedIn).toMatchObject({
+			isNew: false,
+			account: { id: first.account.id, identities: [{ kind: 'apple', label: 'ben@icloud.com' }] },
+		})
+		expect(signedIn.merged).toBeUndefined()
+		const tablet = (await apple(identity(), 'apple-1')).json()
+		expect(tablet).toMatchObject({ account: { id: first.account.id } })
+		expect(calls).toContain(`signed in ${first.account.id} with apple`)
+	})
+
+	it('folds a device’s anonymous account (and its purchase) into the account it signs in to', async () => {
+		const owner = (await apple(identity(), 'apple-2')).json().account.id
+		const phone = identity()
+		const anonymous = (
+			await post('/api/accounts/v1/auth/purchase', {
+				identity: phone,
+				signedTransactions: [
+					signJws(
+						transaction({
+							type: 'Non-Consumable',
+							productId: LIFETIME,
+							expiresDate: undefined,
+							originalTransactionId: 'bought-first',
+						}),
+					),
+				],
+			})
+		).json()
+		const res = (await apple(phone, 'apple-2')).json()
+		expect(res).toMatchObject({
+			merged: true,
+			account: { id: owner, access: { status: 'active', source: 'purchase' } },
+		})
+		expect(calls).toContain(`merge ${anonymous.account.id} into ${owner}`)
+		expect(await db.selectFrom('acct_accounts').select('id').where('id', '=', anonymous.account.id).execute()).toEqual(
+			[],
+		)
+		expect((await app.inject({ url: '/api/accounts/v1/account', headers: bearer(anonymous.token) })).json().id).toBe(
+			owner,
+		)
+	})
+
+	it('refuses to sign a signed-in device into another account', async () => {
+		await apple(identity(), 'apple-3')
+		const phone = identity()
+		await password('register', phone, 'ben@example.com', 'correct horse')
+		expect((await apple(phone, 'apple-3')).json()).toMatchObject({ error: 'identity_in_use' })
+	})
+
+	it('creates an account on sign-in in a trigger app, telling the host', async () => {
+		await host('trigger')
+		const res = (await apple(identity(), 'apple-4')).json()
+		expect(res).toMatchObject({ isNew: true, account: { access: { status: 'none' } } })
+		expect(calls).toEqual([`created ${res.account.id}`, `signed in ${res.account.id} with apple (new)`])
+	})
+
+	it('registers, signs in, and refuses wrong passwords', async () => {
+		const made = (await password('register', identity(), 'Ben@Example.com', 'correct horse')).json()
+		expect(made.account.identities).toEqual([{ kind: 'password', label: 'ben@example.com' }])
+		expect((await password('register', identity(), 'ben@example.com', 'correct horse')).json().account.id).toBe(
+			made.account.id,
+		)
+		expect((await password('register', identity(), 'ben@example.com', 'wrong guess')).json()).toMatchObject({
+			error: 'email_in_use',
+		})
+		expect((await password('signin', identity(), 'ben@example.com', 'wrong guess')).json()).toMatchObject({
+			error: 'invalid_credentials',
+		})
+		expect((await password('signin', identity(), 'nobody@example.com', 'correct horse')).statusCode).toBe(401)
+		expect((await password('signin', identity(), 'ben@example.com', 'correct horse')).json().account.id).toBe(
+			made.account.id,
+		)
+	})
+
+	it('resets a forgotten password with a one-time code, signing every other device out', async () => {
+		const made = (await password('register', identity(), 'ben@example.com', 'correct horse')).json()
+		expect((await post('/api/accounts/v1/auth/password/forgot', { email: 'nobody@example.com' })).json()).toEqual({
+			ok: true,
+		})
+		await post('/api/accounts/v1/auth/password/forgot', { email: 'BEN@example.com' })
+		expect(mailbox).toEqual([{ email: 'ben@example.com', code: expect.stringMatching(/^\d{6}$/) }])
+		const resetBody = (code: string) => ({
+			identity: identity(),
+			email: 'ben@example.com',
+			code,
+			password: 'new horse battery',
+		})
+		expect((await post('/api/accounts/v1/auth/password/reset', resetBody('000000'))).json()).toMatchObject({
+			error: 'code_expired',
+		})
+		const reset = (await post('/api/accounts/v1/auth/password/reset', resetBody(mailbox[0]!.code))).json()
+		expect(reset.account.id).toBe(made.account.id)
+		expect((await post('/api/accounts/v1/auth/password/reset', resetBody(mailbox[0]!.code))).statusCode).toBe(410)
+		expect((await app.inject({ url: '/api/accounts/v1/account', headers: bearer(made.token) })).statusCode).toBe(401)
+		expect((await password('signin', identity(), 'ben@example.com', 'new horse battery')).statusCode).toBe(200)
+	})
+
+	it('signs in with Game Center, and rejects a forged or stale proof', async () => {
+		const res = await post('/api/accounts/v1/auth/game-center', {
+			identity: identity(),
+			...gameCenterProof('T:_player'),
+			displayName: 'Ben',
+		})
+		expect(res.json()).toMatchObject({ account: { identities: [{ kind: 'game_center', label: 'Ben' }] } })
+		const forged = { ...gameCenterProof('T:_player'), teamPlayerID: 'T:_someone' }
+		expect((await post('/api/accounts/v1/auth/game-center', { identity: identity(), ...forged })).json()).toMatchObject(
+			{ error: 'invalid_credentials' },
+		)
+		const stale = gameCenterProof('T:_player', { timestamp: Date.now() - 2 * 3_600_000 })
+		expect((await post('/api/accounts/v1/auth/game-center', { identity: identity(), ...stale })).statusCode).toBe(401)
+	})
+
+	it('adds and changes a password on the signed-in account, and unlinks methods', async () => {
+		const { token } = (await apple(identity(), 'apple-5')).json()
+		const set = (body: object) => post('/api/accounts/v1/account/password', body, bearer(token))
+		expect((await set({ email: 'ben@example.com', password: 'correct horse' })).json()).toEqual({ ok: true })
+		expect((await set({ email: 'ben@example.com', password: 'another one' })).json()).toMatchObject({
+			error: 'invalid_credentials',
+		})
+		expect(
+			(await set({ email: 'ben@example.com', password: 'another one', currentPassword: 'correct horse' })).json(),
+		).toEqual({ ok: true })
+		await password('register', identity(), 'taken@example.com', 'correct horse')
+		expect(
+			(await set({ email: 'taken@example.com', password: 'x'.repeat(8), currentPassword: 'another one' })).json(),
+		).toMatchObject({ error: 'email_in_use' })
+		const after = (await post('/api/accounts/v1/account/unlink', { kind: 'apple' }, bearer(token))).json()
+		expect(after.identities).toEqual([{ kind: 'password', label: 'ben@example.com' }])
+	})
+
+	it('deletes an anonymous account on sign-out in a first-launch app, keeps a signed-in one', async () => {
+		const anonymous = await launch(identity())
+		await post('/api/accounts/v1/account/signout', {}, bearer(anonymous.token))
+		expect(await db.selectFrom('acct_accounts').select('id').where('id', '=', anonymous.account.id).execute()).toEqual(
+			[],
+		)
+		const signedIn = (await apple(identity(), 'apple-6')).json()
+		await post('/api/accounts/v1/account/signout', {}, bearer(signedIn.token))
+		expect(
+			await db.selectFrom('acct_accounts').select('id').where('id', '=', signedIn.account.id).execute(),
+		).toHaveLength(1)
+	})
+
+	it('answers 404 signin_unavailable for methods the server doesn’t offer', async () => {
+		app = await testHost(db)
+		expect((await apple(identity(), 'x')).json()).toMatchObject({ error: 'signin_unavailable' })
+		expect((await post('/api/accounts/v1/auth/password/forgot', { email: 'a@b.co' })).statusCode).toBe(404)
+	})
+
+	it('claims a host-verified identity under the same rules', async () => {
+		const ctx = { db, config: CONFIG, kinds: ['apple', 'game_center', 'pa'] }
+		const owner = (await apple(identity(), 'apple-7')).json().account.id
+		expect(await db.transaction().execute((trx) => claimHostIdentity({ ...ctx, db: trx }, owner, 'pa', 'ben'))).toEqual(
+			{ accountId: owner, merged: false },
+		)
+		const anonymous = (await launch(identity())).account.id
+		expect(
+			await db.transaction().execute((trx) => claimHostIdentity({ ...ctx, db: trx }, anonymous, 'pa', 'ben')),
+		).toEqual({ accountId: owner, merged: true })
+		const other = (await apple(identity(), 'apple-8')).json().account.id
+		await expect(
+			db.transaction().execute((trx) => claimHostIdentity({ ...ctx, db: trx }, other, 'pa', 'ben')),
+		).rejects.toMatchObject({ statusCode: 409 })
+	})
+})

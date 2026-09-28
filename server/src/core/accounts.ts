@@ -1,10 +1,11 @@
 import type { AcctDb } from '../db/tables.js'
 import type { AcctConfig } from './config.js'
+import type { AcctHooks } from './hooks.js'
 import { recordEvent, type Actor } from './events.js'
 import { generateCode } from './ids.js'
 
 /** Creates an empty account (no access until a subscription or grant attaches) with a fresh Support ID. */
-export async function createAccount(db: AcctDb, config: AcctConfig, actor: Actor, reason: string) {
+export async function createAccount(db: AcctDb, config: AcctConfig, actor: Actor, reason: string, hooks?: AcctHooks) {
 	for (let attempt = 0; attempt < 5; attempt++) {
 		const row = await db
 			.insertInto('acct_accounts')
@@ -14,6 +15,7 @@ export async function createAccount(db: AcctDb, config: AcctConfig, actor: Actor
 			.executeTakeFirst()
 		if (!row) continue // a Support ID collision (~40 bits): draw another
 		await recordEvent(db, row.id, 'created', actor, { reason })
+		await hooks?.accountCreated?.(db, row.id)
 		return row
 	}
 	throw new Error('could not allocate a unique Support ID')

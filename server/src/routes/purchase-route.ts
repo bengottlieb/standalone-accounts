@@ -65,7 +65,8 @@ export function purchaseRoute(app: FastifyInstance, o: AcctRouteOptions, identit
 				for (const key of keys.sort()) await lockIdentity(trx, key)
 				const found = await findAccount(trx, identity)
 				const owner = await purchaseOwner(trx, purchases, found?.accountId ?? null)
-				const accountId = found?.accountId ?? owner ?? (await createAccount(trx, config, 'device', 'purchase')).id
+				const accountId =
+					found?.accountId ?? owner ?? (await createAccount(trx, config, 'device', 'purchase', o.hooks)).id
 				for (const p of purchases) {
 					await applyTransaction(trx, p.tx, p.planId, accountId)
 					if (!owner)

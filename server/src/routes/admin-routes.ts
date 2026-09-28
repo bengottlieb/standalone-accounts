@@ -75,7 +75,7 @@ export function acctAdminRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 			const body = parse(s.createBody, request.body)
 			const by = o.userId(request)
 			return db.transaction().execute(async (trx) => {
-				const account = await createAccount(trx, config, actor(by), 'admin')
+				const account = await createAccount(trx, config, actor(by), 'admin', o.hooks)
 				if (body.note) await recordEvent(trx, account.id, 'note', actor(by), { text: body.note })
 				if (body.grant)
 					await addGrant(

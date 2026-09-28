@@ -107,3 +107,13 @@ export async function revokeToken(db: AcctDb, tokenId: string) {
 		.where('revoked_at', 'is', null)
 		.execute()
 }
+
+/** Revokes every live token of the account (a password reset signs every device out). */
+export async function revokeAllTokens(db: AcctDb, accountId: string) {
+	await db
+		.updateTable('acct_tokens')
+		.set({ revoked_at: new Date() })
+		.where('account_id', '=', accountId)
+		.where('revoked_at', 'is', null)
+		.execute()
+}

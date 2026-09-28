@@ -38,4 +38,19 @@ export { accountSummary } from './core/summary.js'
 export { runAccountSweep } from './core/sweep.js'
 export { planForProduct } from './core/purchases.js'
 export type { SearchHook } from './admin/search.js'
+
+// Sign-in methods (docs/DESIGN.md "Sign-in")
+export type { AcctHooks, SignInProfile } from './core/hooks.js'
+export type { SignInOptions } from './signin/options.js'
+export { appleVerifier, SignInRejected, type AppleIdentity } from './signin/apple.js'
+export {
+	gameCenterVerifier,
+	gameCenterKeyFetcher,
+	type GameCenterProof,
+	type GameCenterKeyFetcher,
+} from './signin/game-center.js'
+export { claimHostIdentity, type SignInContext } from './core/sign-in.js'
+export { isAnonymous, mergeInto } from './core/merge.js'
+export { passwordAccount, passwordMatches, storePassword, normalizeEmail } from './core/passwords.js'
+export { signInKinds } from './signin/options.js'
 export type { AdminNames } from './admin/detail.js'
