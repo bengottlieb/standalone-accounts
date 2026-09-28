@@ -4,6 +4,8 @@ import Foundation
 /// OpenAPI operation ids and the `endpoint` field of `contract/v1/fixtures`.
 public enum AccountEndpoint: String, CaseIterable, Sendable {
 	case checkIn, authDevice, authPurchase, authClaim, account, signOut, deleteAccount
+	case signInWithApple, registerPassword, signInWithPassword, forgotPassword, resetPassword, signInWithGameCenter
+	case setPassword, unlinkIdentity
 
 	/// The protocol version this build speaks. Servers keep serving it after they add newer ones (`contract/README.md`).
 	public static let protocolVersion = "v1"
@@ -15,6 +17,8 @@ public enum AccountEndpoint: String, CaseIterable, Sendable {
 	public var method: Method {
 		switch self {
 		case .checkIn, .authDevice, .authPurchase, .authClaim, .signOut: .post
+		case .signInWithApple, .registerPassword, .signInWithPassword, .forgotPassword, .resetPassword, .signInWithGameCenter: .post
+		case .setPassword, .unlinkIdentity: .post
 		case .account: .get
 		case .deleteAccount: .delete
 		}
@@ -32,6 +36,14 @@ public enum AccountEndpoint: String, CaseIterable, Sendable {
 		case .authClaim: "/auth/claim"
 		case .account, .deleteAccount: "/account"
 		case .signOut: "/account/signout"
+		case .signInWithApple: "/auth/apple"
+		case .registerPassword: "/auth/password/register"
+		case .signInWithPassword: "/auth/password/signin"
+		case .forgotPassword: "/auth/password/forgot"
+		case .resetPassword: "/auth/password/reset"
+		case .signInWithGameCenter: "/auth/game-center"
+		case .setPassword: "/account/password"
+		case .unlinkIdentity: "/account/unlink"
 		}
 	}
 
@@ -40,7 +52,8 @@ public enum AccountEndpoint: String, CaseIterable, Sendable {
 	public var requiresToken: Bool {
 		switch self {
 		case .checkIn, .authDevice, .authPurchase, .authClaim: false
-		case .account, .signOut, .deleteAccount: true
+		case .signInWithApple, .registerPassword, .signInWithPassword, .forgotPassword, .resetPassword, .signInWithGameCenter: false
+		case .account, .signOut, .deleteAccount, .setPassword, .unlinkIdentity: true
 		}
 	}
 }

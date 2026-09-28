@@ -26,11 +26,19 @@ export const Access = z.strictObject({
 	willRenew: z.boolean().optional(),
 })
 
+/**
+ * One way to sign in to the account. `kind` is an open set: `apple`, `password`, `game_center`, or a host's own
+ * (`pa`). `label` is what to show: the email for `password`, the Apple email hint if any.
+ */
+export const SignInIdentity = z.strictObject({ kind: z.string().min(1), label: z.string().optional() })
+
 export const AccountSummary = z.strictObject({
 	id: z.uuid(),
 	supportID: z.string().regex(/^[A-Z]{2}-[0-9A-Z]{4}-[0-9A-Z]{4}$/),
 	createdAt: z.iso.datetime(),
 	access: Access,
+	/** How the account can be signed in to; empty for an anonymous (device-only) account. */
+	identities: z.array(SignInIdentity).optional(),
 })
 
 /**
@@ -69,7 +77,55 @@ export const PurchaseAuthRequest = z.strictObject({
 })
 export const ClaimRequest = z.strictObject({ identity: Identity, code: z.string().min(1).max(40) })
 
-export const AuthResponse = z.strictObject({ account: AccountSummary, token: z.string().min(1), isNew: z.boolean() })
+/** Sign in with Apple: the identity token from `ASAuthorizationAppleIDCredential`, and the name Apple gives only once. */
+export const AppleSignInRequest = z.strictObject({
+	identity: Identity,
+	identityToken: z.string().min(1).max(10_000),
+	name: z.string().max(200).optional(),
+})
+/** Email and password: register (or sign in to an existing account with the right password), or sign in. */
+export const PasswordRequest = z.strictObject({
+	identity: Identity,
+	email: z.email().max(320),
+	password: z.string().min(8).max(200),
+})
+/** Asks for a reset code by email. Always answers `{ ok: true }`, whether or not the email has an account. */
+export const ForgotPasswordRequest = z.strictObject({ email: z.email().max(320) })
+/** Sets a new password with the emailed code, revokes every other token, and signs this device in. */
+export const ResetPasswordRequest = z.strictObject({
+	identity: Identity,
+	email: z.email().max(320),
+	code: z.string().min(1).max(20),
+	password: z.string().min(8).max(200),
+})
+/** `GKLocalPlayer.fetchItems(forIdentityVerificationSignature:)`, with signature and salt base64-encoded. */
+export const GameCenterSignInRequest = z.strictObject({
+	identity: Identity,
+	teamPlayerID: z.string().min(1).max(200),
+	bundleID: z.string().min(1).max(200),
+	publicKeyURL: z.url().max(500),
+	signature: z.string().min(1).max(4_000),
+	salt: z.string().min(1).max(200),
+	/** Milliseconds since the epoch, as GameKit reports it. */
+	timestamp: z.number().int(),
+	displayName: z.string().max(200).optional(),
+})
+/** Changes (or, for an account without one, adds) the email and password of the signed-in account. */
+export const SetPasswordRequest = z.strictObject({
+	email: z.email().max(320),
+	password: z.string().min(8).max(200),
+	currentPassword: z.string().max(200).optional(),
+})
+/** Removes one way of signing in (`apple`, `game_center`, …) from the signed-in account. */
+export const UnlinkRequest = z.strictObject({ kind: z.string().min(1).max(50) })
+
+export const AuthResponse = z.strictObject({
+	account: AccountSummary,
+	token: z.string().min(1),
+	isNew: z.boolean(),
+	/** True when signing in folded this device's anonymous account into the one signed in to: reload local data. */
+	merged: z.boolean().optional(),
+})
 /** `/auth/device` alone may answer `{ account: null }`: an unknown device in `trigger` mode. */
 export const DeviceAuthResponse = z.union([AuthResponse, z.strictObject({ account: z.null() })])
 export const OKResponse = z.strictObject({ ok: z.literal(true) })
@@ -86,6 +142,9 @@ export const ErrorCode = z.enum([
 	'code_expired',
 	'rate_limited',
 	'verification_unavailable',
+	'invalid_credentials',
+	'email_in_use',
+	'signin_unavailable',
 ])
 export const ErrorResponse = z.strictObject({ error: ErrorCode, message: z.string().optional() })
 

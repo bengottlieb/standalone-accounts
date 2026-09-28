@@ -1,0 +1,19 @@
+{
+	"endpoint": "unlinkIdentity",
+	"request": {
+		"kind": "apple"
+	},
+	"response": {
+		"status": 200,
+		"body": {
+			"id": "3f8a2c10-6b4d-4e2a-9f1c-7d5e3b1a0c92",
+			"supportID": "PZ-4K7Q-9MPX",
+			"createdAt": "2026-09-28T19:04:11Z",
+			"access": {
+				"status": "none",
+				"active": false
+			},
+			"identities": []
+		}
+	}
+}

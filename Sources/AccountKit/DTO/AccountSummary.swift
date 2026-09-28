@@ -6,15 +6,18 @@ public struct AccountSummary: Codable, Sendable, Equatable, Identifiable {
 	public var supportID: String
 	public var createdAt: Date
 	public var access: AccountAccess
+	/// How the account can be signed in to; empty for an anonymous (device-only) account.
+	public var identities: [SignInIdentity]?
 
-	public init(id: UUID, supportID: String, createdAt: Date, access: AccountAccess) {
+	public init(id: UUID, supportID: String, createdAt: Date, access: AccountAccess, identities: [SignInIdentity]? = nil) {
 		self.id = id
 		self.supportID = supportID
 		self.createdAt = createdAt
 		self.access = access
+		self.identities = identities
 	}
 
-	private enum CodingKeys: String, CodingKey { case id, supportID, createdAt, access }
+	private enum CodingKeys: String, CodingKey { case id, supportID, createdAt, access, identities }
 
 	/// The id is written in lowercase, as the server sends it (Swift's `UUID` encodes uppercase), so a cached summary is
 	/// byte-for-byte the wire format.
@@ -24,6 +27,7 @@ public struct AccountSummary: Codable, Sendable, Equatable, Identifiable {
 		try container.encode(supportID, forKey: .supportID)
 		try container.encode(createdAt, forKey: .createdAt)
 		try container.encode(access, forKey: .access)
+		try container.encodeIfPresent(identities, forKey: .identities)
 	}
 }
 

@@ -5,11 +5,14 @@ public struct AccountAuthResponse: Codable, Sendable, Equatable {
 	public var account: AccountSummary
 	public var token: String
 	public var isNew: Bool
+	/// True when signing in folded this device's anonymous account into the one signed in to: reload local data.
+	public var merged: Bool?
 
-	public init(account: AccountSummary, token: String, isNew: Bool) {
+	public init(account: AccountSummary, token: String, isNew: Bool, merged: Bool? = nil) {
 		self.account = account
 		self.token = token
 		self.isNew = isNew
+		self.merged = merged
 	}
 }
 
@@ -53,6 +56,7 @@ public struct AccountErrorResponse: Codable, Sendable, Equatable, Error {
 public enum AccountErrorCode: Codable, Sendable, Hashable {
 	case invalidRequest, unauthorized, accountSuspended, purchaseInUse, identityInUse, transactionInvalid, transactionRevoked
 	case codeNotFound, codeExpired, rateLimited, verificationUnavailable
+	case invalidCredentials, emailInUse, signinUnavailable
 	/// A code this build doesn't know yet; the server may add codes.
 	case other(String)
 
@@ -61,6 +65,7 @@ public enum AccountErrorCode: Codable, Sendable, Hashable {
 		"purchase_in_use": .purchaseInUse, "identity_in_use": .identityInUse, "transaction_invalid": .transactionInvalid,
 		"transaction_revoked": .transactionRevoked, "code_not_found": .codeNotFound, "code_expired": .codeExpired,
 		"rate_limited": .rateLimited, "verification_unavailable": .verificationUnavailable,
+		"invalid_credentials": .invalidCredentials, "email_in_use": .emailInUse, "signin_unavailable": .signinUnavailable,
 	]
 
 	public var rawValue: String {

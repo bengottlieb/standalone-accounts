@@ -1,0 +1,25 @@
+{
+	"endpoint": "signInWithGameCenter",
+	"request": {
+		"identity": {
+			"deviceSecret": "9f1c2b7a4e6d8c0f1a3b5c7d9e0f2a4b6c8d0e1f3a5b7c9d1e3f5a7b9c1d3e5f",
+			"appTransactionJWS": "eyJhbGciOiJFUzI1NiJ9.e30.sig",
+			"includeLinks": true,
+			"platform": "ios",
+			"appVersion": "2.5 (2490)",
+			"deviceName": "iPhone"
+		},
+		"teamPlayerID": "T:_1a2b3c4d5e6f",
+		"bundleID": "com.standalone.pzl",
+		"publicKeyURL": "https://static.gc.apple.com/public-key/gc-prod-9.cer",
+		"signature": "c2lnbmF0dXJl",
+		"salt": "c2FsdA==",
+		"timestamp": 1790625212000
+	},
+	"response": {
+		"status": 404,
+		"body": {
+			"error": "signin_unavailable"
+		}
+	}
+}

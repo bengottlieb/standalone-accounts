@@ -55,6 +55,62 @@ export const endpoints = {
 		request: null,
 		response: s.OKResponse,
 	},
+	signInWithApple: {
+		method: 'post',
+		path: '/api/accounts/v1/auth/apple',
+		bearer: false,
+		request: s.AppleSignInRequest,
+		response: s.AuthResponse,
+	},
+	registerPassword: {
+		method: 'post',
+		path: '/api/accounts/v1/auth/password/register',
+		bearer: false,
+		request: s.PasswordRequest,
+		response: s.AuthResponse,
+	},
+	signInWithPassword: {
+		method: 'post',
+		path: '/api/accounts/v1/auth/password/signin',
+		bearer: false,
+		request: s.PasswordRequest,
+		response: s.AuthResponse,
+	},
+	forgotPassword: {
+		method: 'post',
+		path: '/api/accounts/v1/auth/password/forgot',
+		bearer: false,
+		request: s.ForgotPasswordRequest,
+		response: s.OKResponse,
+	},
+	resetPassword: {
+		method: 'post',
+		path: '/api/accounts/v1/auth/password/reset',
+		bearer: false,
+		request: s.ResetPasswordRequest,
+		response: s.AuthResponse,
+	},
+	signInWithGameCenter: {
+		method: 'post',
+		path: '/api/accounts/v1/auth/game-center',
+		bearer: false,
+		request: s.GameCenterSignInRequest,
+		response: s.AuthResponse,
+	},
+	setPassword: {
+		method: 'post',
+		path: '/api/accounts/v1/account/password',
+		bearer: true,
+		request: s.SetPasswordRequest,
+		response: s.OKResponse,
+	},
+	unlinkIdentity: {
+		method: 'post',
+		path: '/api/accounts/v1/account/unlink',
+		bearer: true,
+		request: s.UnlinkRequest,
+		response: s.AccountSummary,
+	},
 } as const satisfies Record<string, Endpoint>
 
 export type EndpointName = keyof typeof endpoints

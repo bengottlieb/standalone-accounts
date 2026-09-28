@@ -32,7 +32,14 @@ import Testing
 		case .authDevice: try roundTrip(DeviceAuthRequest.self, request)
 		case .authPurchase: try roundTrip(PurchaseAuthRequest.self, request)
 		case .authClaim: try roundTrip(ClaimRequest.self, request)
-		default: Data()
+		case .signInWithApple: try roundTrip(AppleSignInRequest.self, request)
+		case .registerPassword, .signInWithPassword: try roundTrip(PasswordRequest.self, request)
+		case .forgotPassword: try roundTrip(ForgotPasswordRequest.self, request)
+		case .resetPassword: try roundTrip(ResetPasswordRequest.self, request)
+		case .signInWithGameCenter: try roundTrip(GameCenterSignInRequest.self, request)
+		case .setPassword: try roundTrip(SetPasswordRequest.self, request)
+		case .unlinkIdentity: try roundTrip(UnlinkRequest.self, request)
+		case .account, .signOut, .deleteAccount: Data()
 		}
 		#expect(try sameJSON(encoded, request), "\(fixture.name) request changed in a round trip")
 	}
@@ -41,9 +48,9 @@ import Testing
 		let encoded: Data = switch endpoint {
 		case .checkIn: try roundTrip(CheckInResponse.self, fixture.body)
 		case .authDevice: try roundTrip(DeviceAuthResponse.self, fixture.body)
-		case .authPurchase, .authClaim: try roundTrip(AccountAuthResponse.self, fixture.body)
-		case .account: try roundTrip(AccountSummary.self, fixture.body)
-		case .signOut, .deleteAccount: try roundTrip(AccountOKResponse.self, fixture.body)
+		case .authPurchase, .authClaim, .signInWithApple, .registerPassword, .signInWithPassword, .resetPassword, .signInWithGameCenter: try roundTrip(AccountAuthResponse.self, fixture.body)
+		case .account, .unlinkIdentity: try roundTrip(AccountSummary.self, fixture.body)
+		case .signOut, .deleteAccount, .forgotPassword, .setPassword: try roundTrip(AccountOKResponse.self, fixture.body)
 		}
 		#expect(try sameJSON(encoded, fixture.body), "\(fixture.name) response changed in a round trip")
 	}
