@@ -66,7 +66,7 @@ final class StubTransport: AccountTransport {
 		#expect(answer.update == .required && answer.minimumBuild == 43)
 		let (endpoint, _, token) = try #require(transport.sent.withLock { $0.first })
 		#expect(endpoint == .checkIn && token == "skm_x")
-		#expect(AccountEndpoint.checkIn.path == "/api/v1/check-in")
-		#expect(AccountEndpoint.allCases.allSatisfy { $0.path.hasPrefix("/api/\(AccountEndpoint.protocolVersion)/") })
+		#expect(AccountEndpoint.checkIn.path == "/api/accounts/v1/check-in")
+		#expect(AccountEndpoint.allCases.allSatisfy { $0.path.hasPrefix("/api/accounts/\(AccountEndpoint.protocolVersion)/") })
 	}
 }

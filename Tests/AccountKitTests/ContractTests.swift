@@ -60,4 +60,11 @@ import Testing
 			#expect((operation?["security"] != nil) == endpoint.requiresToken, "\(endpoint) token requirement differs")
 		}
 	}
+
+	@Test func unknownAccessValuesDecode() throws {
+		let json = #"{"status":"paused","active":false,"source":"family","environment":"Staging"}"#
+		let access = try AccountJSON.decoder.decode(AccountAccess.self, from: Data(json.utf8))
+		#expect(access.status.rawValue == "paused" && access.source?.rawValue == "family" && access.environment?.rawValue == "Staging")
+		#expect(try AccountJSON.decoder.decode(AccountAccess.self, from: Data(#"{"status":"active","active":true}"#.utf8)).status == .active)
+	}
 }

@@ -21,7 +21,7 @@ public enum AccountEndpoint: String, CaseIterable, Sendable {
 	}
 
 	public var path: String {
-		"/api/\(Self.protocolVersion)" + relativePath
+		"/api/accounts/\(Self.protocolVersion)" + relativePath
 	}
 
 	var relativePath: String {

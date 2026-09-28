@@ -33,12 +33,15 @@ public struct CheckInRequest: Codable, Sendable, Equatable {
 
 /// Whether this build may carry on, and the server's settings for it.
 public struct CheckInResponse: Codable, Sendable, Equatable {
-	public enum Update: String, Codable, Sendable {
+	/// An open set, like `AccountAccess.Status`: unknown values decode rather than fail.
+	public struct Update: RawRepresentable, Codable, Sendable, Hashable {
+		public let rawValue: String
+		public init(rawValue: String) { self.rawValue = rawValue }
 		/// Below the minimum build: show the update screen and make no other calls.
-		case required
+		public static let required = Update(rawValue: "required")
 		/// A newer build is out; suggest it.
-		case recommended
-		case none
+		public static let recommended = Update(rawValue: "recommended")
+		public static let none = Update(rawValue: "none")
 	}
 
 	public var update: Update

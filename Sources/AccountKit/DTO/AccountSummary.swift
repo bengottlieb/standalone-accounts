@@ -27,18 +27,39 @@ public struct AccountSummary: Codable, Sendable, Equatable, Identifiable {
 	}
 }
 
-/// Effective access: a suspension overrides everything, then any live subscription or grant.
+/// Effective access: a suspension overrides everything, then a live purchase or subscription, then a grant.
+///
+/// `Status`, `Source` and `Environment` are open sets: a server may add values within the protocol version, and this
+/// build keeps them (as unknown raw values) rather than failing to decode. Compare with the constants; `switch` needs a
+/// `default`.
 public struct AccountAccess: Codable, Sendable, Equatable {
-	public enum Status: String, Codable, Sendable {
-		case active, grace, granted, expired, revoked, suspended, none
+	public struct Status: RawRepresentable, Codable, Sendable, Hashable {
+		public let rawValue: String
+		public init(rawValue: String) { self.rawValue = rawValue }
+		public static let active = Status(rawValue: "active")
+		public static let grace = Status(rawValue: "grace")
+		public static let granted = Status(rawValue: "granted")
+		public static let expired = Status(rawValue: "expired")
+		public static let revoked = Status(rawValue: "revoked")
+		public static let suspended = Status(rawValue: "suspended")
+		public static let none = Status(rawValue: "none")
 	}
 
-	public enum Source: String, Codable, Sendable {
-		case subscription, grant
+	public struct Source: RawRepresentable, Codable, Sendable, Hashable {
+		public let rawValue: String
+		public init(rawValue: String) { self.rawValue = rawValue }
+		public static let subscription = Source(rawValue: "subscription")
+		/// A one-time (non-consumable) purchase: no expiry, until refunded.
+		public static let purchase = Source(rawValue: "purchase")
+		public static let grant = Source(rawValue: "grant")
 	}
 
-	public enum Environment: String, Codable, Sendable {
-		case production = "Production", sandbox = "Sandbox", xcode = "Xcode"
+	public struct Environment: RawRepresentable, Codable, Sendable, Hashable {
+		public let rawValue: String
+		public init(rawValue: String) { self.rawValue = rawValue }
+		public static let production = Environment(rawValue: "Production")
+		public static let sandbox = Environment(rawValue: "Sandbox")
+		public static let xcode = Environment(rawValue: "Xcode")
 	}
 
 	public var status: Status
