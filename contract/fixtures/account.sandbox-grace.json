@@ -1,0 +1,21 @@
+{
+	"endpoint": "account",
+	"request": null,
+	"response": {
+		"status": 200,
+		"body": {
+			"id": "7d3c1a52-8e2b-4f60-9a1d-3c5e7b9d0f12",
+			"supportID": "SK-7D3C-1A52",
+			"createdAt": "2026-09-28T19:04:11Z",
+			"access": {
+				"status": "grace",
+				"active": true,
+				"plan": "pro",
+				"source": "subscription",
+				"environment": "Sandbox",
+				"expiresAt": "2026-09-28T19:34:11Z",
+				"willRenew": false
+			}
+		}
+	}
+}

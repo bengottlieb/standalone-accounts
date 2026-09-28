@@ -1,0 +1,17 @@
+{
+	"endpoint": "authDevice",
+	"request": {
+		"identity": {
+			"deviceSecret": "0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9",
+			"includeLinks": true,
+			"platform": "macos",
+			"appVersion": "1.0 (42)"
+		}
+	},
+	"response": {
+		"status": 200,
+		"body": {
+			"account": null
+		}
+	}
+}

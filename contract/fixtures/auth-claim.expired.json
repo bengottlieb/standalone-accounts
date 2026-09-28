@@ -1,0 +1,21 @@
+{
+	"endpoint": "authClaim",
+	"request": {
+		"identity": {
+			"deviceSecret": "9f1c2b7a4e6d8c0f1a3b5c7d9e0f2a4b6c8d0e1f3a5b7c9d1e3f5a7b9c1d3e5f",
+			"appTransactionJWS": "eyJhbGciOiJFUzI1NiJ9.e30.sig",
+			"icloudUserID": "_4b1c9e0a7d3f",
+			"includeLinks": true,
+			"platform": "ios",
+			"appVersion": "1.0 (42)",
+			"deviceName": "iPhone"
+		},
+		"code": "SK-7F3K-Q9PD"
+	},
+	"response": {
+		"status": 410,
+		"body": {
+			"error": "code_expired"
+		}
+	}
+}

@@ -1,0 +1,948 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"title": "Standalone accounts",
+		"version": "0.1.0"
+	},
+	"components": {
+		"securitySchemes": {
+			"bearer": {
+				"type": "http",
+				"scheme": "bearer"
+			}
+		}
+	},
+	"paths": {
+		"/api/v1/auth/device": {
+			"post": {
+				"operationId": "authDevice",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"identity": {
+										"type": "object",
+										"properties": {
+											"deviceSecret": {
+												"type": "string",
+												"pattern": "^[0-9a-f]{64}$"
+											},
+											"appTransactionJWS": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 20000
+											},
+											"icloudUserID": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 200
+											},
+											"includeLinks": {
+												"type": "boolean"
+											},
+											"platform": {
+												"type": "string",
+												"enum": [
+													"ios",
+													"ipados",
+													"macos",
+													"visionos",
+													"watchos",
+													"tvos"
+												]
+											},
+											"appVersion": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 50
+											},
+											"deviceName": {
+												"type": "string",
+												"maxLength": 200
+											}
+										},
+										"required": [
+											"deviceSecret",
+											"includeLinks",
+											"platform",
+											"appVersion"
+										],
+										"additionalProperties": false
+									}
+								},
+								"required": [
+									"identity"
+								],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"anyOf": [
+										{
+											"type": "object",
+											"properties": {
+												"account": {
+													"type": "object",
+													"properties": {
+														"id": {
+															"type": "string",
+															"format": "uuid",
+															"pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+														},
+														"supportID": {
+															"type": "string",
+															"pattern": "^[A-Z]{2}-[0-9A-Z]{4}-[0-9A-Z]{4}$"
+														},
+														"createdAt": {
+															"type": "string",
+															"format": "date-time",
+															"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+														},
+														"access": {
+															"type": "object",
+															"properties": {
+																"status": {
+																	"type": "string",
+																	"enum": [
+																		"active",
+																		"grace",
+																		"granted",
+																		"expired",
+																		"revoked",
+																		"suspended",
+																		"none"
+																	]
+																},
+																"active": {
+																	"type": "boolean"
+																},
+																"plan": {
+																	"type": "string"
+																},
+																"source": {
+																	"type": "string",
+																	"enum": [
+																		"subscription",
+																		"grant"
+																	]
+																},
+																"environment": {
+																	"type": "string",
+																	"enum": [
+																		"Production",
+																		"Sandbox",
+																		"Xcode"
+																	]
+																},
+																"expiresAt": {
+																	"type": "string",
+																	"format": "date-time",
+																	"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+																},
+																"willRenew": {
+																	"type": "boolean"
+																}
+															},
+															"required": [
+																"status",
+																"active"
+															],
+															"additionalProperties": false
+														}
+													},
+													"required": [
+														"id",
+														"supportID",
+														"createdAt",
+														"access"
+													],
+													"additionalProperties": false
+												},
+												"token": {
+													"type": "string",
+													"minLength": 1
+												},
+												"isNew": {
+													"type": "boolean"
+												}
+											},
+											"required": [
+												"account",
+												"token",
+												"isNew"
+											],
+											"additionalProperties": false
+										},
+										{
+											"type": "object",
+											"properties": {
+												"account": {
+													"type": "string",
+													"nullable": true,
+													"enum": [
+														null
+													]
+												}
+											},
+											"required": [
+												"account"
+											],
+											"additionalProperties": false
+										}
+									]
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string",
+											"enum": [
+												"invalid_request",
+												"unauthorized",
+												"account_suspended",
+												"purchase_in_use",
+												"identity_in_use",
+												"transaction_invalid",
+												"transaction_revoked",
+												"code_not_found",
+												"code_expired",
+												"rate_limited",
+												"verification_unavailable"
+											]
+										},
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"error"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/v1/auth/purchase": {
+			"post": {
+				"operationId": "authPurchase",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"identity": {
+										"type": "object",
+										"properties": {
+											"deviceSecret": {
+												"type": "string",
+												"pattern": "^[0-9a-f]{64}$"
+											},
+											"appTransactionJWS": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 20000
+											},
+											"icloudUserID": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 200
+											},
+											"includeLinks": {
+												"type": "boolean"
+											},
+											"platform": {
+												"type": "string",
+												"enum": [
+													"ios",
+													"ipados",
+													"macos",
+													"visionos",
+													"watchos",
+													"tvos"
+												]
+											},
+											"appVersion": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 50
+											},
+											"deviceName": {
+												"type": "string",
+												"maxLength": 200
+											}
+										},
+										"required": [
+											"deviceSecret",
+											"includeLinks",
+											"platform",
+											"appVersion"
+										],
+										"additionalProperties": false
+									},
+									"signedTransactions": {
+										"minItems": 1,
+										"maxItems": 50,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"minLength": 1,
+											"maxLength": 20000
+										}
+									}
+								},
+								"required": [
+									"identity",
+									"signedTransactions"
+								],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"account": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string",
+													"format": "uuid",
+													"pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+												},
+												"supportID": {
+													"type": "string",
+													"pattern": "^[A-Z]{2}-[0-9A-Z]{4}-[0-9A-Z]{4}$"
+												},
+												"createdAt": {
+													"type": "string",
+													"format": "date-time",
+													"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+												},
+												"access": {
+													"type": "object",
+													"properties": {
+														"status": {
+															"type": "string",
+															"enum": [
+																"active",
+																"grace",
+																"granted",
+																"expired",
+																"revoked",
+																"suspended",
+																"none"
+															]
+														},
+														"active": {
+															"type": "boolean"
+														},
+														"plan": {
+															"type": "string"
+														},
+														"source": {
+															"type": "string",
+															"enum": [
+																"subscription",
+																"grant"
+															]
+														},
+														"environment": {
+															"type": "string",
+															"enum": [
+																"Production",
+																"Sandbox",
+																"Xcode"
+															]
+														},
+														"expiresAt": {
+															"type": "string",
+															"format": "date-time",
+															"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+														},
+														"willRenew": {
+															"type": "boolean"
+														}
+													},
+													"required": [
+														"status",
+														"active"
+													],
+													"additionalProperties": false
+												}
+											},
+											"required": [
+												"id",
+												"supportID",
+												"createdAt",
+												"access"
+											],
+											"additionalProperties": false
+										},
+										"token": {
+											"type": "string",
+											"minLength": 1
+										},
+										"isNew": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"account",
+										"token",
+										"isNew"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string",
+											"enum": [
+												"invalid_request",
+												"unauthorized",
+												"account_suspended",
+												"purchase_in_use",
+												"identity_in_use",
+												"transaction_invalid",
+												"transaction_revoked",
+												"code_not_found",
+												"code_expired",
+												"rate_limited",
+												"verification_unavailable"
+											]
+										},
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"error"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/v1/auth/claim": {
+			"post": {
+				"operationId": "authClaim",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"identity": {
+										"type": "object",
+										"properties": {
+											"deviceSecret": {
+												"type": "string",
+												"pattern": "^[0-9a-f]{64}$"
+											},
+											"appTransactionJWS": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 20000
+											},
+											"icloudUserID": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 200
+											},
+											"includeLinks": {
+												"type": "boolean"
+											},
+											"platform": {
+												"type": "string",
+												"enum": [
+													"ios",
+													"ipados",
+													"macos",
+													"visionos",
+													"watchos",
+													"tvos"
+												]
+											},
+											"appVersion": {
+												"type": "string",
+												"minLength": 1,
+												"maxLength": 50
+											},
+											"deviceName": {
+												"type": "string",
+												"maxLength": 200
+											}
+										},
+										"required": [
+											"deviceSecret",
+											"includeLinks",
+											"platform",
+											"appVersion"
+										],
+										"additionalProperties": false
+									},
+									"code": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 40
+									}
+								},
+								"required": [
+									"identity",
+									"code"
+								],
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"account": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string",
+													"format": "uuid",
+													"pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+												},
+												"supportID": {
+													"type": "string",
+													"pattern": "^[A-Z]{2}-[0-9A-Z]{4}-[0-9A-Z]{4}$"
+												},
+												"createdAt": {
+													"type": "string",
+													"format": "date-time",
+													"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+												},
+												"access": {
+													"type": "object",
+													"properties": {
+														"status": {
+															"type": "string",
+															"enum": [
+																"active",
+																"grace",
+																"granted",
+																"expired",
+																"revoked",
+																"suspended",
+																"none"
+															]
+														},
+														"active": {
+															"type": "boolean"
+														},
+														"plan": {
+															"type": "string"
+														},
+														"source": {
+															"type": "string",
+															"enum": [
+																"subscription",
+																"grant"
+															]
+														},
+														"environment": {
+															"type": "string",
+															"enum": [
+																"Production",
+																"Sandbox",
+																"Xcode"
+															]
+														},
+														"expiresAt": {
+															"type": "string",
+															"format": "date-time",
+															"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+														},
+														"willRenew": {
+															"type": "boolean"
+														}
+													},
+													"required": [
+														"status",
+														"active"
+													],
+													"additionalProperties": false
+												}
+											},
+											"required": [
+												"id",
+												"supportID",
+												"createdAt",
+												"access"
+											],
+											"additionalProperties": false
+										},
+										"token": {
+											"type": "string",
+											"minLength": 1
+										},
+										"isNew": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"account",
+										"token",
+										"isNew"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string",
+											"enum": [
+												"invalid_request",
+												"unauthorized",
+												"account_suspended",
+												"purchase_in_use",
+												"identity_in_use",
+												"transaction_invalid",
+												"transaction_revoked",
+												"code_not_found",
+												"code_expired",
+												"rate_limited",
+												"verification_unavailable"
+											]
+										},
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"error"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/v1/account": {
+			"get": {
+				"operationId": "account",
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string",
+											"format": "uuid",
+											"pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+										},
+										"supportID": {
+											"type": "string",
+											"pattern": "^[A-Z]{2}-[0-9A-Z]{4}-[0-9A-Z]{4}$"
+										},
+										"createdAt": {
+											"type": "string",
+											"format": "date-time",
+											"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+										},
+										"access": {
+											"type": "object",
+											"properties": {
+												"status": {
+													"type": "string",
+													"enum": [
+														"active",
+														"grace",
+														"granted",
+														"expired",
+														"revoked",
+														"suspended",
+														"none"
+													]
+												},
+												"active": {
+													"type": "boolean"
+												},
+												"plan": {
+													"type": "string"
+												},
+												"source": {
+													"type": "string",
+													"enum": [
+														"subscription",
+														"grant"
+													]
+												},
+												"environment": {
+													"type": "string",
+													"enum": [
+														"Production",
+														"Sandbox",
+														"Xcode"
+													]
+												},
+												"expiresAt": {
+													"type": "string",
+													"format": "date-time",
+													"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+												},
+												"willRenew": {
+													"type": "boolean"
+												}
+											},
+											"required": [
+												"status",
+												"active"
+											],
+											"additionalProperties": false
+										}
+									},
+									"required": [
+										"id",
+										"supportID",
+										"createdAt",
+										"access"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string",
+											"enum": [
+												"invalid_request",
+												"unauthorized",
+												"account_suspended",
+												"purchase_in_use",
+												"identity_in_use",
+												"transaction_invalid",
+												"transaction_revoked",
+												"code_not_found",
+												"code_expired",
+												"rate_limited",
+												"verification_unavailable"
+											]
+										},
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"error"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "deleteAccount",
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"ok": {
+											"type": "boolean",
+											"enum": [
+												true
+											]
+										}
+									},
+									"required": [
+										"ok"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string",
+											"enum": [
+												"invalid_request",
+												"unauthorized",
+												"account_suspended",
+												"purchase_in_use",
+												"identity_in_use",
+												"transaction_invalid",
+												"transaction_revoked",
+												"code_not_found",
+												"code_expired",
+												"rate_limited",
+												"verification_unavailable"
+											]
+										},
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"error"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/v1/account/signout": {
+			"post": {
+				"operationId": "signOut",
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"ok": {
+											"type": "boolean",
+											"enum": [
+												true
+											]
+										}
+									},
+									"required": [
+										"ok"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					},
+					"default": {
+						"description": "Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string",
+											"enum": [
+												"invalid_request",
+												"unauthorized",
+												"account_suspended",
+												"purchase_in_use",
+												"identity_in_use",
+												"transaction_invalid",
+												"transaction_revoked",
+												"code_not_found",
+												"code_expired",
+												"rate_limited",
+												"verification_unavailable"
+											]
+										},
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"error"
+									],
+									"additionalProperties": false
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

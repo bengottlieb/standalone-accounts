@@ -1,0 +1,38 @@
+{
+	"endpoint": "authPurchase",
+	"request": {
+		"identity": {
+			"deviceSecret": "9f1c2b7a4e6d8c0f1a3b5c7d9e0f2a4b6c8d0e1f3a5b7c9d1e3f5a7b9c1d3e5f",
+			"appTransactionJWS": "eyJhbGciOiJFUzI1NiJ9.e30.sig",
+			"icloudUserID": "_4b1c9e0a7d3f",
+			"includeLinks": true,
+			"platform": "ios",
+			"appVersion": "1.0 (42)",
+			"deviceName": "iPhone"
+		},
+		"signedTransactions": [
+			"eyJhbGciOiJFUzI1NiJ9.eyJvcmlnaW5hbFRyYW5zYWN0aW9uSWQiOiIyMDAwMDAwMDAwMDAwMDAxIn0.sig"
+		]
+	},
+	"response": {
+		"status": 200,
+		"body": {
+			"account": {
+				"id": "7d3c1a52-8e2b-4f60-9a1d-3c5e7b9d0f12",
+				"supportID": "SK-7D3C-1A52",
+				"createdAt": "2026-09-28T19:04:11Z",
+				"access": {
+					"status": "active",
+					"active": true,
+					"plan": "pro",
+					"source": "subscription",
+					"environment": "Production",
+					"expiresAt": "2026-10-28T19:04:11Z",
+					"willRenew": true
+				}
+			},
+			"token": "skm_3f9a0c7e1b5d2a8f6c4e0b9d7a5c3e1f",
+			"isNew": true
+		}
+	}
+}

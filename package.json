@@ -1,0 +1,33 @@
+{
+	"name": "@standalone/accounts",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Server half of the Standalone account framework; AccountKit (Swift) lives in the same repo.",
+	"type": "module",
+	"exports": {
+		".": "./server/dist/src/index.js"
+	},
+	"types": "./server/dist/src/index.d.ts",
+	"files": [
+		"server/dist",
+		"server/migrations",
+		"contract"
+	],
+	"scripts": {
+		"build": "tsc -p server/tsconfig.build.json",
+		"prepare": "npm run build",
+		"test": "vitest run --root server",
+		"typecheck": "tsc -p server/tsconfig.json --noEmit",
+		"contract:openapi": "tsx server/scripts/openapi.ts"
+	},
+	"peerDependencies": {
+		"zod": "^4.1.0"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.2",
+		"tsx": "^4.23.15",
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.1",
+		"zod": "^4.6.5"
+	}
+}

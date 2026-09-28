@@ -1,0 +1,10 @@
+{
+	"endpoint": "signOut",
+	"request": null,
+	"response": {
+		"status": 200,
+		"body": {
+			"ok": true
+		}
+	}
+}
