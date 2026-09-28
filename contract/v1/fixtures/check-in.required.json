@@ -1,0 +1,24 @@
+{
+	"endpoint": "checkIn",
+	"request": {
+		"bundle": "com.standalone.storekeeper",
+		"version": "1.0",
+		"build": 42,
+		"platform": "ios",
+		"osVersion": "27.0",
+		"protocolVersion": "v1"
+	},
+	"response": {
+		"status": 200,
+		"body": {
+			"update": "required",
+			"minimumBuild": 43,
+			"message": "This version of StoreKeeper is no longer supported. Please update.",
+			"serverTime": "2026-09-28T19:04:11Z",
+			"protocolVersions": [
+				"v1"
+			],
+			"config": {}
+		}
+	}
+}

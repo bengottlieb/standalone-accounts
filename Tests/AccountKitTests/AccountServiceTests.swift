@@ -58,4 +58,15 @@ final class StubTransport: AccountTransport {
 		try await service(transport).signOut(token: "skm_x")
 		#expect(transport.sent.withLock { $0.map(\.2) } == ["skm_x"])
 	}
+
+	@Test func checksInWithTheBuildAndTokenWhenThereIsOne() async throws {
+		let transport = StubTransport(body: #"{"update":"required","minimumBuild":43,"serverTime":"2026-09-28T19:04:11Z","protocolVersions":["v1"],"config":{}}"#)
+		let request = CheckInRequest(bundle: "com.standalone.storekeeper", version: "1.0", build: 42, platform: .macos)
+		let answer = try await service(transport).checkIn(request, token: "skm_x")
+		#expect(answer.update == .required && answer.minimumBuild == 43)
+		let (endpoint, _, token) = try #require(transport.sent.withLock { $0.first })
+		#expect(endpoint == .checkIn && token == "skm_x")
+		#expect(AccountEndpoint.checkIn.path == "/api/v1/check-in")
+		#expect(AccountEndpoint.allCases.allSatisfy { $0.path.hasPrefix("/api/\(AccountEndpoint.protocolVersion)/") })
+	}
 }

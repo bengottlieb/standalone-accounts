@@ -1,2 +1,2 @@
-export * from './contract/schemas.js';
-export { endpoints, type EndpointName } from './contract/endpoints.js';
+export * as v1 from './contract/v1/schemas.js';
+export { versions, type ProtocolVersion } from './contract/versions.js';

@@ -1,6 +1,8 @@
 import Foundation
+@testable import AccountKit
 
-/// One `contract/fixtures/*.json` file: the same files the server's tests check.
+/// One `contract/<version>/fixtures/*.json` file, for the protocol version this build speaks: the same files the
+/// server's tests check.
 struct ContractFixture {
 	let name: String
 	let endpoint: String
@@ -8,7 +10,7 @@ struct ContractFixture {
 	let status: Int
 	let body: Data
 
-	static let directory = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../../contract")
+	static let directory = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../../contract/\(AccountEndpoint.protocolVersion)")
 
 	static func all() throws -> [ContractFixture] {
 		let folder = directory.appending(path: "fixtures")

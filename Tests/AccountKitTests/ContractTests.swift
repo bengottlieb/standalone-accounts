@@ -28,6 +28,7 @@ import Testing
 			return
 		}
 		let encoded: Data = switch endpoint {
+		case .checkIn: try roundTrip(CheckInRequest.self, request)
 		case .authDevice: try roundTrip(DeviceAuthRequest.self, request)
 		case .authPurchase: try roundTrip(PurchaseAuthRequest.self, request)
 		case .authClaim: try roundTrip(ClaimRequest.self, request)
@@ -38,6 +39,7 @@ import Testing
 
 	func checkResponse(_ fixture: ContractFixture, _ endpoint: AccountEndpoint) throws {
 		let encoded: Data = switch endpoint {
+		case .checkIn: try roundTrip(CheckInResponse.self, fixture.body)
 		case .authDevice: try roundTrip(DeviceAuthResponse.self, fixture.body)
 		case .authPurchase, .authClaim: try roundTrip(AccountAuthResponse.self, fixture.body)
 		case .account: try roundTrip(AccountSummary.self, fixture.body)

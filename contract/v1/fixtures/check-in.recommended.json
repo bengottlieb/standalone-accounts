@@ -1,0 +1,27 @@
+{
+	"endpoint": "checkIn",
+	"request": {
+		"bundle": "com.standalone.storekeeper",
+		"version": "1.0",
+		"build": 42,
+		"platform": "ios",
+		"osVersion": "27.0",
+		"protocolVersion": "v1"
+	},
+	"response": {
+		"status": 200,
+		"body": {
+			"update": "recommended",
+			"minimumBuild": 40,
+			"recommendedBuild": 45,
+			"message": "StoreKeeper 1.1 adds keyword alerts.",
+			"serverTime": "2026-09-28T19:04:11Z",
+			"protocolVersions": [
+				"v1"
+			],
+			"config": {
+				"maintenance": null
+			}
+		}
+	}
+}

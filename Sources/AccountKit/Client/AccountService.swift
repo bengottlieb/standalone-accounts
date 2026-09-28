@@ -10,6 +10,13 @@ public struct AccountService: Sendable {
 		self.identity = identity
 	}
 
+	/// Tells the server which build this is and learns whether it must (or should) update. Call it at launch, on returning
+	/// to the foreground and every few hours while running; on `.required`, show the update screen and make no other
+	/// calls. `token`, when the device has one, lets the server record the build against this device.
+	public func checkIn(_ request: CheckInRequest, token: String? = nil) async throws -> CheckInResponse {
+		try await call(.checkIn, body: request, token: token)
+	}
+
 	/// This device's account, or `.noAccount` in apps that create accounts only on a purchase or claim.
 	public func authenticateDevice(includeLinks: Bool = true) async throws -> DeviceAuthResponse {
 		let request = DeviceAuthRequest(identity: try await identity.current(includeLinks: includeLinks))

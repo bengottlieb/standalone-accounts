@@ -1,0 +1,23 @@
+{
+	"endpoint": "checkIn",
+	"request": {
+		"bundle": "com.standalone.storekeeper",
+		"version": "1.0",
+		"build": 42,
+		"platform": "ios",
+		"osVersion": "27.0",
+		"protocolVersion": "v1"
+	},
+	"response": {
+		"status": 200,
+		"body": {
+			"update": "none",
+			"minimumBuild": 40,
+			"serverTime": "2026-09-28T19:04:11Z",
+			"protocolVersions": [
+				"v1"
+			],
+			"config": {}
+		}
+	}
+}

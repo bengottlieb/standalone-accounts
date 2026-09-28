@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
-// The wire protocol shared with AccountKit. Shipped clients pin these shapes: add optional fields, never rename or
-// remove one. contract/fixtures holds one request/response pair per case and both test suites check them.
+// Version 1 of the wire protocol shared with AccountKit (paths under /api/v1). Shipped clients pin these shapes: within
+// v1, add optional fields and new error codes only, never rename or remove one; anything else is v2, served alongside.
+// contract/v1/fixtures holds one request/response pair per case, and both test suites check every supported version.
 
 export const Identity = z.strictObject({
 	deviceSecret: z.string().regex(/^[0-9a-f]{64}$/),
@@ -30,6 +31,35 @@ export const AccountSummary = z.strictObject({
 	supportID: z.string().regex(/^[A-Z]{2}-[0-9A-Z]{4}-[0-9A-Z]{4}$/),
 	createdAt: z.iso.datetime(),
 	access: Access,
+});
+
+/**
+ * `POST /check-in`: the app says which build it is, at launch, on returning to the foreground and every few hours while
+ * running. With a bearer token, the server records the build on that device. No account needed.
+ */
+export const CheckInRequest = z.strictObject({
+	bundle: z.string().min(1).max(200),
+	version: z.string().min(1).max(50),
+	/** CFBundleVersion as an integer: what minimum builds compare against. */
+	build: z.number().int().nonnegative(),
+	platform: Identity.shape.platform,
+	osVersion: z.string().max(50).optional(),
+	/** The protocol version the build speaks (`v1`). */
+	protocolVersion: z.string().regex(/^v\d+$/),
+});
+
+/**
+ * `required`: this build is below the minimum; show the update screen and make no other calls. `recommended`: a newer
+ * build is out; suggest it. `config` is the host's own settings (feature flags, maintenance notices).
+ */
+export const CheckInResponse = z.strictObject({
+	update: z.enum(['required', 'recommended', 'none']),
+	minimumBuild: z.number().int().nullable(),
+	recommendedBuild: z.number().int().optional(),
+	message: z.string().optional(),
+	serverTime: z.iso.datetime(),
+	protocolVersions: z.array(z.string()).min(1),
+	config: z.record(z.string(), z.unknown()),
 });
 
 export const DeviceAuthRequest = z.strictObject({ identity: Identity });

@@ -4,6 +4,7 @@ import * as s from './schemas.js';
 type Endpoint = {
 	method: 'get' | 'post' | 'delete';
 	path: string;
+	/** Requires the device's bearer token (`checkIn` takes one optionally). */
 	bearer: boolean;
 	request: z.ZodType | null;
 	response: z.ZodType;
@@ -11,6 +12,7 @@ type Endpoint = {
 
 // Mirrors AccountKit's AccountEndpoint; the fixture tests on both sides key off these names.
 export const endpoints = {
+	checkIn: { method: 'post', path: '/api/v1/check-in', bearer: false, request: s.CheckInRequest, response: s.CheckInResponse },
 	authDevice: { method: 'post', path: '/api/v1/auth/device', bearer: false, request: s.DeviceAuthRequest, response: s.DeviceAuthResponse },
 	authPurchase: { method: 'post', path: '/api/v1/auth/purchase', bearer: false, request: s.PurchaseAuthRequest, response: s.AuthResponse },
 	authClaim: { method: 'post', path: '/api/v1/auth/claim', bearer: false, request: s.ClaimRequest, response: s.AuthResponse },

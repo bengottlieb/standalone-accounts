@@ -1,9 +1,12 @@
 import Foundation
 
-/// Every account call, with its method and path exactly as `contract/openapi.json` has them. The case names are the
-/// OpenAPI operation ids and the `endpoint` field of `contract/fixtures`.
+/// Every account call, with its method and path exactly as `contract/v1/openapi.json` has them. The case names are the
+/// OpenAPI operation ids and the `endpoint` field of `contract/v1/fixtures`.
 public enum AccountEndpoint: String, CaseIterable, Sendable {
-	case authDevice, authPurchase, authClaim, account, signOut, deleteAccount
+	case checkIn, authDevice, authPurchase, authClaim, account, signOut, deleteAccount
+
+	/// The protocol version this build speaks. Servers keep serving it after they add newer ones (`contract/README.md`).
+	public static let protocolVersion = "v1"
 
 	public enum Method: String, Sendable {
 		case get = "GET", post = "POST", delete = "DELETE"
@@ -11,26 +14,32 @@ public enum AccountEndpoint: String, CaseIterable, Sendable {
 
 	public var method: Method {
 		switch self {
-		case .authDevice, .authPurchase, .authClaim, .signOut: .post
+		case .checkIn, .authDevice, .authPurchase, .authClaim, .signOut: .post
 		case .account: .get
 		case .deleteAccount: .delete
 		}
 	}
 
 	public var path: String {
+		"/api/\(Self.protocolVersion)" + relativePath
+	}
+
+	var relativePath: String {
 		switch self {
-		case .authDevice: "/api/v1/auth/device"
-		case .authPurchase: "/api/v1/auth/purchase"
-		case .authClaim: "/api/v1/auth/claim"
-		case .account, .deleteAccount: "/api/v1/account"
-		case .signOut: "/api/v1/account/signout"
+		case .checkIn: "/check-in"
+		case .authDevice: "/auth/device"
+		case .authPurchase: "/auth/purchase"
+		case .authClaim: "/auth/claim"
+		case .account, .deleteAccount: "/account"
+		case .signOut: "/account/signout"
 		}
 	}
 
-	/// Whether the call sends this device's bearer token. The `auth` calls prove identity with the device secret instead.
+	/// Whether the call needs this device's bearer token. The `auth` calls prove identity with the device secret instead;
+	/// `checkIn` sends the token when there is one.
 	public var requiresToken: Bool {
 		switch self {
-		case .authDevice, .authPurchase, .authClaim: false
+		case .checkIn, .authDevice, .authPurchase, .authClaim: false
 		case .account, .signOut, .deleteAccount: true
 		}
 	}
