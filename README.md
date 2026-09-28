@@ -7,7 +7,7 @@ contract:
 |---|---|
 | `Package.swift`, `Sources/AccountKit` | **AccountKit**, the Swift client: device secret, identity collection (App Store transaction, CloudKit hint), the reinstall stamp, protocol DTOs, `AccountService` over an app-supplied `AccountTransport` |
 | `package.json`, `server/` | **@standalone/accounts**, the server library: contract schemas (Zod) now; tables, link resolution, purchases, grants, claim codes and admin routes next |
-| `contract/` | `openapi.json` (generated from the Zod schemas) and `fixtures/*.json` — request/response pairs both test suites check |
+| `contract/` | One directory per protocol version (`v1/`): `openapi.json` (generated from the Zod schemas) and `fixtures/*.json`, request/response pairs both test suites check. Rules in `contract/README.md` |
 | `docs/DESIGN.md` | The design of record |
 
 ## Using it
@@ -17,5 +17,6 @@ contract:
 
 ## Changing the protocol
 
-Shipped apps pin it: add optional fields, never rename or remove. Edit `server/src/contract/`, run
-`npm run contract:openapi`, add or update fixtures, then run both `npm test` and `swift test`.
+Shipped apps pin it, so within a version changes are additive only and fixtures are append-only; anything else is a
+new version served alongside (see `contract/README.md`). Edit `server/src/contract/<version>/`, run
+`npm run contract:openapi`, add fixtures, then run both `npm test` and `swift test`.

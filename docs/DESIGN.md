@@ -35,7 +35,7 @@ A secret that points at X while the app transaction points at Y keeps the device
 - `tokenPrefix` — `skm_`, `pzl_`.
 - Plans and products are per `bundle_id`.
 
-## Protocol (see `contract/openapi.yaml` and `contract/fixtures/`)
+## Protocol (see `contract/v1/openapi.json` and `contract/v1/fixtures/`)
 
 Every call that can bind a device sends the same identity block:
 `{ deviceSecret, appTransactionJWS?, icloudUserID?, includeLinks, platform, appVersion, deviceName? }`.
@@ -43,6 +43,7 @@ Every call that can bind a device sends the same identity block:
 
 | Call | Auth | Result |
 |---|---|---|
+| `POST /api/v1/check-in` | none (bearer optional) | `{ update, minimumBuild, recommendedBuild?, message?, serverTime, protocolVersions, config }` |
 | `POST /api/v1/auth/device` | identity | `{ account, token, isNew }`, or `{ account: null }` (200) for an unknown device in `trigger` mode |
 | `POST /api/v1/auth/purchase` | identity + `signedTransactions[]` | `{ account, token, isNew }`; 409 `purchase_in_use` |
 | `POST /api/v1/auth/claim` | identity + `code` | `{ account, token, isNew }`; 409 `identity_in_use`, 410 `code_expired`, 404 `code_not_found` |
@@ -53,7 +54,14 @@ Every call that can bind a device sends the same identity block:
 `AccountSummary` is `{ id, supportID, createdAt, access: { status, active, plan?, source?, environment?, expiresAt?,
 willRenew? } }`; `status` is one of active, grace, granted, expired, revoked, suspended, none.
 
-Errors are `{ "error": "<code>", "message"?: "…" }`; clients keep unknown codes rather than failing to decode. Suspended accounts answer 403 `account_suspended` everywhere
+Errors are `{ "error": "<code>", "message"?: "…" }`; clients keep unknown codes rather than failing to decode.
+
+**Versioning** (`contract/README.md`): the major version is in the path. Within a version changes are additive only
+and fixtures are append-only once a build ships; a breaking change is a new version served alongside the old one.
+Apps check in (`POST /api/v1/check-in`: bundle, version, build, protocol version) at launch, on foreground and every
+few hours; the answer says whether an update is `required` (below the minimum build: stop and ask for it),
+`recommended` or not, and carries the host's `config`. Enforcement is cooperative; a bearer token lets the server
+record each device's build. Suspended accounts answer 403 `account_suspended` everywhere
 except `GET /account`, `signout` and `DELETE /account`.
 
 ## Access
@@ -69,9 +77,10 @@ Effective access = **suspension** (overrides everything) → any live **subscrip
 ## Purchases and notifications
 
 - `appAccountToken` = the account id whenever the device already has an account; nothing otherwise.
-- A notification for an `originalTransactionId` no account owns is **parked** (no account is created). The next
-  `/auth/purchase` with it creates the account, attaches the subscription and applies the parked state. Admin lists
-  parked ones as "unclaimed subscriptions"; a claim code can pick one up.
+- A notification for an `originalTransactionId` no account owns is kept as an **unclaimed subscription**
+  (`account_id` null; no account is created) with Apple's state applied. The next `/auth/purchase` with it creates the
+  account and attaches it; an admin can attach it to an account by hand. Deleting an account unclaims its
+  subscriptions the same way.
 - A transaction whose `appAccountToken` names a different account than the caller's is 409 `purchase_in_use`.
 
 ## Manual accounts and claim codes
@@ -115,9 +124,11 @@ apps has two accounts unless a verified shared link (Sign in with Apple, Game Ce
 
 `@standalone/accounts`: Kysely over the host's `pg` pool, plain SQL migrations with an `acct_migrations` ledger,
 tables prefixed `acct_` — independent of the host's ORM (AppOutlet: Kysely; PZLServer: Drizzle). Tables:
-`acct_accounts`, `acct_links`, `acct_device_credentials`, `acct_tokens`, `acct_subscriptions`,
-`acct_parked_notifications`, `acct_grants`, `acct_suspensions`, `acct_claim_codes`, `acct_events`. Fastify plugins
-for the member routes and the admin API; hooks for host search fields, host deletion and extra link kinds.
+`acct_accounts` (with effective access materialized: `status`, `plan_id`, `access_*`), `acct_subscriptions`,
+`acct_links`, `acct_hints`, `acct_device_credentials`, `acct_tokens`, `acct_grants`, `acct_suspensions`,
+`acct_claim_codes`, `acct_events`. Fastify route sets for the device calls and the admin API; host hooks for extra
+account fields, admin search, admin names and (later) extra link kinds. Built first in AppOutlet at `server/src/acct`
+(its docs/ACCOUNTS.md lists the admin endpoints).
 
 ## Rollout
 
@@ -125,7 +136,9 @@ for the member routes and the admin API; hooks for host search fields, host dele
    endpoint table, transport protocol).
 2. This week: PZLServer's `/auth/device` moves to the protocol and gains `/auth/purchase` and `/auth/claim`; Peasel's
    client adopts `AccountKit`; Peasel ships.
-3. Next: the library is built inside AppOutlet (`server/src/accounts/`, no imports from app code) replacing migration
-   0011's purchase-keyed `accounts`, then extracted here; PZLServer's internals move onto it behind the same protocol.
+3. Done 2026-09-28: the library is built inside AppOutlet (`server/src/acct/`, boundary enforced by a test),
+   replacing migration 0011's purchase-keyed `accounts`, with Admin → Accounts in its web app.
+4. Next: extract it here; StoreKeeper's client moves to AccountKit; PZLServer's internals move onto the library behind
+   the same protocol.
 
 Deferred: admin merge tool, in-app support conversations, soft delete, ORM standardization.
