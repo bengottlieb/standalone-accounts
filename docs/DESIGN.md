@@ -43,22 +43,24 @@ Every call that can bind a device sends the same identity block:
 
 | Call | Auth | Result |
 |---|---|---|
-| `POST /api/v1/check-in` | none (bearer optional) | `{ update, minimumBuild, recommendedBuild?, message?, serverTime, protocolVersions, config }` |
-| `POST /api/v1/auth/device` | identity | `{ account, token, isNew }`, or `{ account: null }` (200) for an unknown device in `trigger` mode |
-| `POST /api/v1/auth/purchase` | identity + `signedTransactions[]` | `{ account, token, isNew }`; 409 `purchase_in_use` |
-| `POST /api/v1/auth/claim` | identity + `code` | `{ account, token, isNew }`; 409 `identity_in_use`, 410 `code_expired`, 404 `code_not_found` |
-| `GET /api/v1/account` | Bearer | `AccountSummary` |
-| `POST /api/v1/account/signout` | Bearer | revokes the token, unlinks this device's secret |
-| `DELETE /api/v1/account` | Bearer | hard delete (below) |
+| `POST /api/accounts/v1/check-in` | none (bearer optional) | `{ update, minimumBuild, recommendedBuild?, message?, serverTime, protocolVersions, config }` |
+| `POST /api/accounts/v1/auth/device` | identity | `{ account, token, isNew }`, or `{ account: null }` (200) for an unknown device in `trigger` mode |
+| `POST /api/accounts/v1/auth/purchase` | identity + `signedTransactions[]` | `{ account, token, isNew }`; 409 `purchase_in_use` |
+| `POST /api/accounts/v1/auth/claim` | identity + `code` | `{ account, token, isNew }`; 409 `identity_in_use`, 410 `code_expired`, 404 `code_not_found` |
+| `GET /api/accounts/v1/account` | Bearer | `AccountSummary` |
+| `POST /api/accounts/v1/account/signout` | Bearer | revokes the token, unlinks this device's secret |
+| `DELETE /api/accounts/v1/account` | Bearer | hard delete (below) |
 
 `AccountSummary` is `{ id, supportID, createdAt, access: { status, active, plan?, source?, environment?, expiresAt?,
 willRenew? } }`; `status` is one of active, grace, granted, expired, revoked, suspended, none.
 
 Errors are `{ "error": "<code>", "message"?: "…" }`; clients keep unknown codes rather than failing to decode.
 
-**Versioning** (`contract/README.md`): the major version is in the path. Within a version changes are additive only
+**Versioning** (`contract/README.md`): the protocol lives under its own prefix, `/api/accounts/<version>/`, so it never
+collides with a host's own API (PZLServer keeps its older `/api/v1/auth/device` for shipped builds). The major version
+is in the path. Within a version changes are additive only
 and fixtures are append-only once a build ships; a breaking change is a new version served alongside the old one.
-Apps check in (`POST /api/v1/check-in`: bundle, version, build, protocol version) at launch, on foreground and every
+Apps check in (`POST /api/accounts/v1/check-in`: bundle, version, build, protocol version) at launch, on foreground and every
 few hours; the answer says whether an update is `required` (below the minimum build: stop and ask for it),
 `recommended` or not, and carries the host's `config`. Enforcement is cooperative; a bearer token lets the server
 record each device's build. Suspended accounts answer 403 `account_suspended` everywhere
@@ -66,10 +68,13 @@ except `GET /account`, `signout` and `DELETE /account`.
 
 ## Access
 
-Effective access = **suspension** (overrides everything) → any live **subscription** or any live **grant** → none.
+Effective access = **suspension** (overrides everything) → any live **purchase** (a one-time purchase of a plan's
+product, active until refunded, or a subscription) → one in its grace period → any live **grant** → none.
+`access.source` says which: `purchase`, `subscription` or `grant`.
 
-- Subscriptions come only from Apple (activation, App Store Server Notifications V2, "Refresh from Apple"). No direct
-  edits: Apple's next notification would overwrite them.
+- Purchases come only from Apple (`/auth/purchase`, App Store Server Notifications V2, "Refresh from Apple"): auto-renewable
+  subscriptions and non-consumables of products a plan lists (`acct_plans.product_ids`). Other products (puzzle packs,
+  consumables) stay the host's business. No direct edits: Apple's next notification would overwrite them.
 - Grants: plan, source (`manual`, `promo`, `beta`), start, optional expiry, note. Expired by the nightly sweep.
 - Environment lives on the subscription. Production servers accept `Production` and `Sandbox` (App Review and
   TestFlight buy in Sandbox); `Xcode`-signed only outside production. Stats and digests count Production only.
@@ -77,7 +82,7 @@ Effective access = **suspension** (overrides everything) → any live **subscrip
 ## Purchases and notifications
 
 - `appAccountToken` = the account id whenever the device already has an account; nothing otherwise.
-- A notification for an `originalTransactionId` no account owns is kept as an **unclaimed subscription**
+- A notification for an `originalTransactionId` no account owns is kept as an **unclaimed purchase**
   (`account_id` null; no account is created) with Apple's state applied. The next `/auth/purchase` with it creates the
   account and attaches it; an admin can attach it to an account by hand. Deleting an account unclaims its
   subscriptions the same way.
@@ -107,11 +112,11 @@ Gated by the host's admin users (viewer = read-only).
 - Now: a Support ID (`SK-XXXX-XXXX`, derived from the account id, or the device id without an account) shown in the
   app with a copy button; "Contact Support" opens a prefilled email with the Support ID, version, OS, platform,
   environment and access; admin support notes and a ticket link per account.
-- Goal (later): in-app conversations — `POST /api/v1/support/threads`, `…/messages`, replies by push, admin inbox.
+- Goal (later): in-app conversations — `POST /api/accounts/v1/support/threads`, `…/messages`, replies by push, admin inbox.
 
 ## Deletion
 
-`DELETE /api/v1/account` from the app (required by App Review 5.1.1(v)). The app warns first that deleting does not
+`DELETE /api/accounts/v1/account` from the app (required by App Review 5.1.1(v)). The app warns first that deleting does not
 cancel an active subscription and offers `manageSubscriptionsSheet`. Hard delete, cascading to links, devices, tokens,
 grants and host data; one tombstone event with no personal data. A later purchase restore creates a fresh account.
 
@@ -122,13 +127,18 @@ apps has two accounts unless a verified shared link (Sign in with Apple, Game Ce
 
 ## Server library
 
-`@standalone/accounts`: Kysely over the host's `pg` pool, plain SQL migrations with an `acct_migrations` ledger,
-tables prefixed `acct_` — independent of the host's ORM (AppOutlet: Kysely; PZLServer: Drizzle). Tables:
-`acct_accounts` (with effective access materialized: `status`, `plan_id`, `access_*`), `acct_subscriptions`,
-`acct_links`, `acct_hints`, `acct_device_credentials`, `acct_tokens`, `acct_grants`, `acct_suspensions`,
-`acct_claim_codes`, `acct_events`. Fastify route sets for the device calls and the admin API; host hooks for extra
-account fields, admin search, admin names and (later) extra link kinds. Built first in AppOutlet at `server/src/acct`
-(its docs/ACCOUNTS.md lists the admin endpoints).
+`@standalone/accounts` (this repo's `package.json`, code in `server/src`), consumed as
+`github:bengottlieb/standalone-accounts#<tag>`: Kysely over the host's `pg` pool, independent of the host's ORM
+(AppOutlet: Kysely; PZLServer: Drizzle). `migrateAccounts(db)` applies `server/migrations` with its own ledger
+(`acct_schema_migrations`); hosts run it at boot before their own migrations. Tables: `acct_plans`, `acct_accounts`
+(effective access materialized: `status`, `plan_id`, `access_*`), `acct_purchases`, `acct_links`, `acct_hints`,
+`acct_device_credentials`, `acct_tokens`, `acct_grants`, `acct_suspensions`, `acct_claim_codes`, `acct_events`,
+`acct_store_notifications`; none references a host table.
+
+A host provides: `request.account` from `resolveToken` in its auth hook; `registerAccountRoutes` (check-in, auth,
+account) with its build policy and optional account `extras`; `registerAccountAdminRoutes` with its admin guards, and
+optionally a search hook and admin names; an App Store notifications endpoint that verifies with `AppStoreVerifier` and
+calls `processNotification`; a nightly `runAccountSweep`. Its own user data references `acct_accounts(id)`.
 
 ## Rollout
 
@@ -136,9 +146,9 @@ account fields, admin search, admin names and (later) extra link kinds. Built fi
    endpoint table, transport protocol).
 2. This week: PZLServer's `/auth/device` moves to the protocol and gains `/auth/purchase` and `/auth/claim`; Peasel's
    client adopts `AccountKit`; Peasel ships.
-3. Done 2026-09-28: the library is built inside AppOutlet (`server/src/acct/`, boundary enforced by a test),
-   replacing migration 0011's purchase-keyed `accounts`, with Admin → Accounts in its web app.
-4. Next: extract it here; StoreKeeper's client moves to AccountKit; PZLServer's internals move onto the library behind
-   the same protocol.
+3. Done 2026-09-28: the library was built inside AppOutlet, then extracted here (v0.2.0) with one-time purchases;
+   AppOutlet runs on it.
+4. Next: PZLServer moves onto it and Crosswords and Peasel onto AccountKit (replacing PZLAccount's device routes);
+   StoreKeeper's client moves to AccountKit.
 
 Deferred: admin merge tool, in-app support conversations, soft delete, ORM standardization.
