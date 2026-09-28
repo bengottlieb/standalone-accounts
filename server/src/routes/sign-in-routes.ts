@@ -30,6 +30,7 @@ export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 		value: string,
 		label: string | undefined,
 		name?: string,
+		email?: string,
 	) {
 		const device = await verifyIdentity(appStore, config.secret, body.identity, request.log)
 		const result = await run(async (trx, host) => {
@@ -39,7 +40,7 @@ export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 			const signedIn = await signInWith(c, device, owner, (accountId) => addLink(trx, accountId, kind, value), {
 				method: kind,
 				name,
-				email: label,
+				email,
 			})
 			await setLabel(trx, signedIn.accountId, kind, label)
 			return signedIn
@@ -69,7 +70,7 @@ export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 			if (!signIn?.apple) throw unavailable()
 			const body = parse(appleSignInBody, request.body)
 			const apple = await signIn.apple.verify(body.identityToken).catch(rejected)
-			return withLink(request, body, 'apple', apple.sub, apple.email, body.name)
+			return withLink(request, body, 'apple', apple.sub, apple.email, body.name, apple.email)
 		},
 	)
 

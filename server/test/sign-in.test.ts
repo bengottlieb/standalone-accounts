@@ -217,4 +217,52 @@ describe('sign-in methods', () => {
 		await apple(identity(), 'apple-host')
 		expect(seen).toEqual(['host-handle', 'host-handle'])
 	})
+
+	it('throttles wrong passwords per caller and email', async () => {
+		await password('register', identity(), 'guard@example.com', 'correct horse')
+		for (let i = 0; i < 5; i++)
+			expect((await password('signin', identity(), 'guard@example.com', 'wrong guess')).statusCode).toBe(401)
+		const blocked = await password('signin', identity(), 'guard@example.com', 'correct horse')
+		expect(blocked.statusCode).toBe(429)
+		expect(blocked.json()).toMatchObject({ error: 'rate_limited' })
+		expect((await password('signin', identity(), 'other@example.com', 'wrong guess')).statusCode).toBe(401)
+	})
+
+	it('tells the host about a password set on an account, a reset, and never takes a Game Center name for an email', async () => {
+		const profiles: { email?: string; name?: string; password?: string; method: string }[] = []
+		const resets: string[] = []
+		const s = testSignIn()
+		mailbox = s.mailbox
+		app = await testHost(db, {
+			config: { creation: 'first-launch' },
+			signIn: s.signIn,
+			hooks: {
+				signedIn: async (_db, _id, profile) => void profiles.push(profile),
+				passwordReset: async (_db, id) => void resets.push(id),
+			},
+		})
+		const gc = (
+			await post('/api/accounts/v1/auth/game-center', {
+				identity: identity(),
+				...gameCenterProof('T:_named'),
+				displayName: 'Ben',
+			})
+		).json()
+		expect(profiles.at(-1)).toMatchObject({ method: 'game_center', name: 'Ben' })
+		expect(profiles.at(-1)?.email).toBeUndefined()
+		await post(
+			'/api/accounts/v1/account/password',
+			{ email: 'Set@Example.com', password: 'correct horse' },
+			bearer(gc.token),
+		)
+		expect(profiles.at(-1)).toMatchObject({ method: 'password', email: 'set@example.com', password: 'correct horse' })
+		await post('/api/accounts/v1/auth/password/forgot', { email: 'set@example.com' })
+		await post('/api/accounts/v1/auth/password/reset', {
+			identity: identity(),
+			email: 'set@example.com',
+			code: mailbox[0]!.code,
+			password: 'new horse battery',
+		})
+		expect(resets).toEqual([gc.account.id])
+	})
 })

@@ -29,6 +29,8 @@ export interface AcctHooks {
 	mergeAccounts?: (db: AcctDb, fromId: string, intoId: string, host: unknown) => Promise<void>
 	/** Someone signed in to `accountId` with a sign-in method (a nickname from the name, a last-signed-in time). */
 	signedIn?: (db: AcctDb, accountId: string, profile: SignInProfile, host: unknown) => Promise<void>
+	/** The account's password was reset with an emailed code; the library revoked its device tokens (PZLServer revokes its API tokens too). */
+	passwordReset?: (db: AcctDb, accountId: string, host: unknown) => Promise<void>
 	/** An account is about to be deleted (by its owner or an admin); throw to refuse (PZLServer keeps admins). */
 	accountDeleting?: (db: AcctDb, accountId: string, host: unknown) => Promise<void>
 }

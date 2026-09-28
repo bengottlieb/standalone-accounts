@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { recordEvent } from '../core/events.js'
-import { passwordAccount, passwordMatches, storePassword } from '../core/passwords.js'
+import { normalizeEmail, passwordAccount, passwordMatches, storePassword } from '../core/passwords.js'
 import { HttpError, parse } from '../http/errors.js'
 import { jsonSchema, okBody, responses } from '../http/schema.js'
 import { signInKinds } from '../signin/options.js'
@@ -48,6 +48,13 @@ export function identityRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				if (owner && owner.account_id !== accountId) throw new HttpError(409, 'email_in_use')
 				await storePassword(trx, accountId, body.email, body.password)
 				await recordEvent(trx, accountId, 'password_changed', 'device')
+				// The host hears of it as a password sign-in (PZLServer records the email, adopts a legacy identity).
+				await o.hooks?.signedIn?.(
+					trx,
+					accountId,
+					{ method: 'password', email: normalizeEmail(body.email), password: body.password, isNew: false },
+					host,
+				)
 			})
 			return { ok: true as const }
 		},

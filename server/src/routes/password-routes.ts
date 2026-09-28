@@ -11,6 +11,7 @@ import {
 } from '../core/passwords.js'
 import { signInWith, type SignInContext } from '../core/sign-in.js'
 import { revokeAllTokens } from '../core/tokens.js'
+import { guessLimiter } from '../core/guesses.js'
 import { HttpError, parse } from '../http/errors.js'
 import { jsonSchema, okBody, responses } from '../http/schema.js'
 import { forgotPasswordBody, passwordBody, resetPasswordBody } from './contract.js'
@@ -48,16 +49,23 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 		},
 	})
 
-	/** Signs the device in to the email's account (checked by `check`), or attaches the email to the device's account. */
-	async function signInByEmail(request: { body: unknown; log: FastifyInstance['log'] }, register: boolean) {
+	// Wrong passwords and reset codes: five per caller and email every 15 minutes.
+	const guesses = guessLimiter()
+
+	/** Signs the device in to the email's account, or attaches the email to the device's account. */
+	async function signInByEmail(request: { body: unknown; log: FastifyInstance['log']; ip: string }, register: boolean) {
 		available()
 		const body = parse(passwordBody, request.body)
+		const guessKey = `${request.ip}|${normalizeEmail(body.email)}`
+		guesses.check(guessKey)
 		const device = await verifyIdentity(appStore, config.secret, body.identity, request.log)
 		const result = await run(async (trx, host) => {
 			await lockIdentity(trx, `password:${normalizeEmail(body.email)}`)
 			const existing = await passwordAccount(trx, body.email)
-			if (existing && !(await passwordMatches(existing.password_hash, body.password)))
+			if (existing && !(await passwordMatches(existing.password_hash, body.password))) {
+				guesses.miss(guessKey)
 				throw register ? new HttpError(409, 'email_in_use') : new HttpError(401, 'invalid_credentials')
+			}
 			if (!existing && !register) throw new HttpError(401, 'invalid_credentials')
 			return signInWith(
 				{ ...ctx, db: trx, host },
@@ -99,13 +107,19 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 	app.post(reset.path, reset.options, async (request) => {
 		available()
 		const body = parse(resetPasswordBody, request.body)
+		const guessKey = `${request.ip}|${normalizeEmail(body.email)}`
+		guesses.check(guessKey)
 		const device = await verifyIdentity(appStore, config.secret, body.identity, request.log)
 		const result = await run(async (trx, host) => {
 			const account = await passwordAccount(trx, body.email)
 			if (!account) throw new HttpError(410, 'code_expired')
-			await spendResetCode(trx, config.secret, account.account_id, body.code)
+			await spendResetCode(trx, config.secret, account.account_id, body.code).catch((error: unknown) => {
+				guesses.miss(guessKey)
+				throw error
+			})
 			await storePassword(trx, account.account_id, account.email, body.password)
 			await revokeAllTokens(trx, account.account_id)
+			await o.hooks?.passwordReset?.(trx, account.account_id, host)
 			return signInWith({ ...ctx, db: trx, host }, device, account.account_id, async () => {}, {
 				method: 'password',
 				email: account.email,
