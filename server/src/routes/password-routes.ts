@@ -14,12 +14,14 @@ import { revokeAllTokens } from '../core/tokens.js'
 import { HttpError, parse } from '../http/errors.js'
 import { jsonSchema, okBody, responses } from '../http/schema.js'
 import { forgotPasswordBody, passwordBody, resetPasswordBody } from './contract.js'
+import { transactor } from '../core/transaction.js'
 import { tags, type AcctRouteOptions } from './options.js'
 import { responders } from './respond.js'
 
 /** Email and password: register (or sign in with the right password), sign in, forgot, reset. */
 export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: SignInContext) {
 	const { db, config, appStore, authRouteConfig, signIn } = o
+	const run = transactor(db, o.transaction)
 	const { schemas, authResponse } = responders(o)
 	const available = () => {
 		if (!signIn?.password) throw new HttpError(404, 'signin_unavailable')
@@ -51,18 +53,18 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 		available()
 		const body = parse(passwordBody, request.body)
 		const device = await verifyIdentity(appStore, config.secret, body.identity, request.log)
-		const result = await db.transaction().execute(async (trx) => {
+		const result = await run(async (trx, host) => {
 			await lockIdentity(trx, `password:${normalizeEmail(body.email)}`)
 			const existing = await passwordAccount(trx, body.email)
 			if (existing && !(await passwordMatches(existing.password_hash, body.password)))
 				throw register ? new HttpError(409, 'email_in_use') : new HttpError(401, 'invalid_credentials')
 			if (!existing && !register) throw new HttpError(401, 'invalid_credentials')
 			return signInWith(
-				{ ...ctx, db: trx },
+				{ ...ctx, db: trx, host },
 				device,
 				existing?.account_id ?? null,
 				(accountId) => storePassword(trx, accountId, body.email, body.password),
-				{ method: 'password', email: normalizeEmail(body.email) },
+				{ method: 'password', email: normalizeEmail(body.email), password: body.password },
 			)
 		})
 		return authResponse(result.accountId, device.secretHash, device.deviceName, result.isNew, result.merged)
@@ -98,13 +100,13 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 		available()
 		const body = parse(resetPasswordBody, request.body)
 		const device = await verifyIdentity(appStore, config.secret, body.identity, request.log)
-		const result = await db.transaction().execute(async (trx) => {
+		const result = await run(async (trx, host) => {
 			const account = await passwordAccount(trx, body.email)
 			if (!account) throw new HttpError(410, 'code_expired')
 			await spendResetCode(trx, config.secret, account.account_id, body.code)
 			await storePassword(trx, account.account_id, account.email, body.password)
 			await revokeAllTokens(trx, account.account_id)
-			return signInWith({ ...ctx, db: trx }, device, account.account_id, async () => {}, {
+			return signInWith({ ...ctx, db: trx, host }, device, account.account_id, async () => {}, {
 				method: 'password',
 				email: account.email,
 			})

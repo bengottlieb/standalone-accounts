@@ -8,6 +8,7 @@ import { jsonSchema, responses } from '../http/schema.js'
 import { SignInRejected } from '../signin/apple.js'
 import { signInKinds } from '../signin/options.js'
 import { appleSignInBody, gameCenterBody } from './contract.js'
+import { transactor } from '../core/transaction.js'
 import { tags, type AcctRouteOptions } from './options.js'
 import { passwordRoutes } from './password-routes.js'
 import { responders } from './respond.js'
@@ -17,6 +18,7 @@ const unavailable = () => new HttpError(404, 'signin_unavailable')
 /** Sign in with Apple and with Game Center: both prove a link (`apple`, `game_center`) and follow `signInWith`. */
 export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 	const { db, config, appStore, authRouteConfig, signIn } = o
+	const run = transactor(db, o.transaction)
 	const { schemas, authResponse } = responders(o)
 	const ctx = { db, config, hooks: o.hooks, kinds: signInKinds(signIn) }
 
@@ -30,9 +32,9 @@ export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 		name?: string,
 	) {
 		const device = await verifyIdentity(appStore, config.secret, body.identity, request.log)
-		const result = await db.transaction().execute(async (trx) => {
+		const result = await run(async (trx, host) => {
 			await lockIdentity(trx, `${kind}:${value}`)
-			const c = { ...ctx, db: trx }
+			const c = { ...ctx, db: trx, host }
 			const owner = await linkOwner(trx, kind, value)
 			const signedIn = await signInWith(c, device, owner, (accountId) => addLink(trx, accountId, kind, value), {
 				method: kind,

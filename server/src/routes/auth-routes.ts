@@ -10,11 +10,13 @@ import { recordEvent } from '../core/events.js'
 import { bindDevice, findAccount, lockIdentity, type DeviceIdentity } from '../core/identity.js'
 import { purchaseRoute } from './purchase-route.js'
 import { responders } from './respond.js'
+import { transactor } from '../core/transaction.js'
 import { tags, type AcctRouteOptions, type IdentityOf } from './options.js'
 
 /** `/api/accounts/v1/auth/*`: the calls that bind a device to an account by proving an identity (no token). */
 export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 	const { db, config, appStore, authRouteConfig } = o
+	const run = transactor(db, o.transaction)
 	const { schemas, authResponse } = responders(o)
 	const identityOf: IdentityOf = (body, log) => verifyIdentity(appStore, config.secret, body.identity, log)
 
@@ -33,11 +35,12 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 		},
 		async (request) => {
 			const identity = await identityOf(parse(deviceAuthBody, request.body), request.log)
-			const bound = await db.transaction().execute(async (trx) => {
+			const bound = await run(async (trx, host) => {
 				if (identity.appTransactionId) await lockIdentity(trx, `app_transaction:${identity.appTransactionId}`)
 				const found = await findAccount(trx, identity)
 				if (!found && config.creation === 'trigger') return null
-				const accountId = found?.accountId ?? (await createAccount(trx, config, 'device', 'first-launch', o.hooks)).id
+				const accountId =
+					found?.accountId ?? (await createAccount(trx, config, 'device', 'first-launch', o.hooks, host)).id
 				await bindDevice(trx, accountId, identity)
 				return { accountId, isNew: !found }
 			})
@@ -64,7 +67,7 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 		async (request) => {
 			const body = parse(claimBody, request.body)
 			const identity: DeviceIdentity = await identityOf(body, request.log)
-			const accountId = await db.transaction().execute(async (trx) => {
+			const accountId = await run(async (trx, host) => {
 				const claimed = await redeemClaimCode(trx, config, body.code)
 				const found = await findAccount(trx, identity)
 				if (found && found.accountId !== claimed) throw new HttpError(409, 'identity_in_use')

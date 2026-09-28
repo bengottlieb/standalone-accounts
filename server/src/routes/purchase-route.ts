@@ -9,6 +9,7 @@ import { recordEvent } from '../core/events.js'
 import { bindDevice, findAccount, lockIdentity } from '../core/identity.js'
 import { purchaseOwner, verifyPurchases } from '../core/verify-purchases.js'
 import { applyTransaction, revokePurchase } from '../core/purchases.js'
+import { transactor } from '../core/transaction.js'
 import { tags, type AcctRouteOptions, type IdentityOf } from './options.js'
 import { responders } from './respond.js'
 
@@ -20,6 +21,7 @@ const invalidBody = z.object({ error: z.literal('transaction_invalid'), reason: 
  */
 export function purchaseRoute(app: FastifyInstance, o: AcctRouteOptions, identityOf: IdentityOf) {
 	const { db, config, appStore, authRouteConfig } = o
+	const run = transactor(db, o.transaction)
 	const { schemas, authResponse } = responders(o)
 
 	app.post(
@@ -59,14 +61,14 @@ export function purchaseRoute(app: FastifyInstance, o: AcctRouteOptions, identit
 				throw new HttpError(403, 'transaction_revoked')
 			}
 
-			const bound = await db.transaction().execute(async (trx) => {
+			const bound = await run(async (trx, host) => {
 				const keys = purchases.map((p) => `original_transaction:${p.tx.originalTransactionId}`)
 				if (identity.appTransactionId) keys.push(`app_transaction:${identity.appTransactionId}`)
 				for (const key of keys.sort()) await lockIdentity(trx, key)
 				const found = await findAccount(trx, identity)
 				const owner = await purchaseOwner(trx, purchases, found?.accountId ?? null)
 				const accountId =
-					found?.accountId ?? owner ?? (await createAccount(trx, config, 'device', 'purchase', o.hooks)).id
+					found?.accountId ?? owner ?? (await createAccount(trx, config, 'device', 'purchase', o.hooks, host)).id
 				for (const p of purchases) {
 					await applyTransaction(trx, p.tx, p.planId, accountId)
 					if (!owner)

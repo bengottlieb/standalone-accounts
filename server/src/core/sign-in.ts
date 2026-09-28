@@ -14,6 +14,8 @@ export interface SignInContext {
 	hooks?: AcctHooks
 	/** Link kinds that make an account signed in (`signInKinds`). */
 	kinds: string[]
+	/** The host's handle from its `transaction`, passed to hooks. */
+	host?: unknown
 }
 
 export interface SignInResult {
@@ -50,18 +52,18 @@ export async function signInWith(
 					{},
 					{ message: 'This device is signed in to another account. Sign out first.' },
 				)
-			await mergeInto(ctx.db, current, owner, 'device', ctx.hooks)
+			await mergeInto(ctx.db, current, owner, 'device', ctx.hooks, ctx.host)
 			merged = true
 		}
 		accountId = owner
 	} else {
-		accountId = current ?? (await createAccount(ctx.db, ctx.config, 'device', profile.method, ctx.hooks)).id
+		accountId = current ?? (await createAccount(ctx.db, ctx.config, 'device', profile.method, ctx.hooks, ctx.host)).id
 		isNew = !current
 		await attach(accountId)
 	}
 	await bindDevice(ctx.db, accountId, device)
 	await recordEvent(ctx.db, accountId, 'signed_in', 'device', { method: profile.method })
-	await ctx.hooks?.signedIn?.(ctx.db, accountId, { ...profile, isNew })
+	await ctx.hooks?.signedIn?.(ctx.db, accountId, { ...profile, isNew }, ctx.host)
 	await refreshAccess(ctx.db, accountId, 'device')
 	return { accountId, isNew, merged } satisfies SignInResult
 }
@@ -110,6 +112,6 @@ export async function claimHostIdentity(ctx: SignInContext, accountId: string, k
 		return { accountId, merged: false }
 	}
 	if (!(await isAnonymous(ctx.db, accountId, ctx.kinds))) throw new HttpError(409, 'identity_in_use')
-	await mergeInto(ctx.db, accountId, owner, 'device', ctx.hooks)
+	await mergeInto(ctx.db, accountId, owner, 'device', ctx.hooks, ctx.host)
 	return { accountId: owner, merged: true }
 }

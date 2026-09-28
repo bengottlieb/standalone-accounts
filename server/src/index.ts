@@ -41,6 +41,7 @@ export type { SearchHook } from './admin/search.js'
 
 // Sign-in methods (docs/DESIGN.md "Sign-in")
 export type { AcctHooks, SignInProfile } from './core/hooks.js'
+export type { HostTransaction } from './core/transaction.js'
 export type { SignInOptions } from './signin/options.js'
 export { appleVerifier, SignInRejected, type AppleIdentity } from './signin/apple.js'
 export {

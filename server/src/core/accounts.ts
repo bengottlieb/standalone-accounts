@@ -5,7 +5,14 @@ import { recordEvent, type Actor } from './events.js'
 import { generateCode } from './ids.js'
 
 /** Creates an empty account (no access until a subscription or grant attaches) with a fresh Support ID. */
-export async function createAccount(db: AcctDb, config: AcctConfig, actor: Actor, reason: string, hooks?: AcctHooks) {
+export async function createAccount(
+	db: AcctDb,
+	config: AcctConfig,
+	actor: Actor,
+	reason: string,
+	hooks?: AcctHooks,
+	host?: unknown,
+) {
 	for (let attempt = 0; attempt < 5; attempt++) {
 		const row = await db
 			.insertInto('acct_accounts')
@@ -15,7 +22,7 @@ export async function createAccount(db: AcctDb, config: AcctConfig, actor: Actor
 			.executeTakeFirst()
 		if (!row) continue // a Support ID collision (~40 bits): draw another
 		await recordEvent(db, row.id, 'created', actor, { reason })
-		await hooks?.accountCreated?.(db, row.id)
+		await hooks?.accountCreated?.(db, row.id, host)
 		return row
 	}
 	throw new Error('could not allocate a unique Support ID')
@@ -26,7 +33,8 @@ export async function createAccount(db: AcctDb, config: AcctConfig, actor: Actor
  * subscriptions become unclaimed, so a later `/auth/purchase` with them starts a fresh account. Its timeline goes
  * too (it names devices); only a tombstone event with no personal data remains. Run inside a transaction.
  */
-export async function deleteAccount(db: AcctDb, accountId: string, actor: Actor) {
+export async function deleteAccount(db: AcctDb, accountId: string, actor: Actor, hooks?: AcctHooks, host?: unknown) {
+	await hooks?.accountDeleting?.(db, accountId, host)
 	const deleted = await db.deleteFrom('acct_accounts').where('id', '=', accountId).returning('id').executeTakeFirst()
 	if (!deleted) return false
 	await db.deleteFrom('acct_events').where('account_id', '=', accountId).execute()

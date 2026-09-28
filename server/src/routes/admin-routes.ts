@@ -11,11 +11,13 @@ import { recordEvent } from '../core/events.js'
 import { addGrant } from '../core/overrides.js'
 import * as s from './admin-schemas.js'
 import { adminActionRoutes } from './admin-action-routes.js'
+import { transactor } from '../core/transaction.js'
 import { adminTags as tags, type AcctAdminOptions } from './options.js'
 
 /** The admin API over accounts: browse and search, detail, create, delete, and unclaimed purchases. */
 export function acctAdminRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 	const { db, config, guards } = o
+	const run = transactor(db, o.transaction)
 	const BASE = `${o.adminPrefix ?? '/api/v1/admin'}/accounts`
 	const PURCHASES = `${o.adminPrefix ?? '/api/v1/admin'}/purchases`
 	const actor = (userId: string) => `admin:${userId}` as const
@@ -74,8 +76,8 @@ export function acctAdminRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 		async (request) => {
 			const body = parse(s.createBody, request.body)
 			const by = o.userId(request)
-			return db.transaction().execute(async (trx) => {
-				const account = await createAccount(trx, config, actor(by), 'admin', o.hooks)
+			return run(async (trx, host) => {
+				const account = await createAccount(trx, config, actor(by), 'admin', o.hooks, host)
 				if (body.note) await recordEvent(trx, account.id, 'note', actor(by), { text: body.note })
 				if (body.grant)
 					await addGrant(
@@ -113,7 +115,7 @@ export function acctAdminRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 		},
 		async (request) => {
 			const { id } = parse(s.idParams, request.params)
-			const deleted = await db.transaction().execute((trx) => deleteAccount(trx, id, actor(o.userId(request))))
+			const deleted = await run((trx, host) => deleteAccount(trx, id, actor(o.userId(request)), o.hooks, host))
 			if (!deleted) throw new HttpError(404, 'account_not_found')
 			return { ok: true as const }
 		},
@@ -168,7 +170,7 @@ export function acctAdminRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 		async (request) => {
 			const { id } = parse(s.idParams, request.params)
 			const { accountId } = parse(s.attachBody, request.body)
-			await db.transaction().execute(async (trx) => {
+			await run(async (trx, host) => {
 				const sub = await trx
 					.selectFrom('acct_purchases')
 					.select(['account_id', 'original_transaction_id'])

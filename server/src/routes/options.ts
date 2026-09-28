@@ -9,6 +9,7 @@ import type { AdminNames } from '../admin/detail.js'
 import type { SearchHook } from '../admin/search.js'
 import type { DeviceIdentity } from '../core/identity.js'
 import type { AcctHooks } from '../core/hooks.js'
+import type { HostTransaction } from '../core/transaction.js'
 import type { SignInOptions } from '../signin/options.js'
 
 /** What the host hands the account routes. */
@@ -22,6 +23,8 @@ export interface AcctRouteOptions {
 	extras?: { schema: z.ZodObject; load: (accountId: string) => Promise<Record<string, unknown>> }
 	/** The host's own per-account data. */
 	hooks?: AcctHooks
+	/** Run the library's transactions in the host's (so hooks can write through the host's own database layer). */
+	transaction?: HostTransaction
 	/** Which sign-in methods this server offers; the rest answer 404 `signin_unavailable`. */
 	signIn?: SignInOptions
 }
@@ -48,6 +51,7 @@ export interface AcctAdminOptions {
 	/** Where the admin API lives (default `/api/v1/admin`): `<prefix>/accounts…`, `<prefix>/purchases…`. */
 	adminPrefix?: string
 	hooks?: AcctHooks
+	transaction?: HostTransaction
 }
 
 export const adminTags = ['admin', 'accounts']

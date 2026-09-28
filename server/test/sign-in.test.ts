@@ -202,4 +202,19 @@ describe('sign-in methods', () => {
 			db.transaction().execute((trx) => claimHostIdentity({ ...ctx, db: trx }, other, 'pa', 'ben')),
 		).rejects.toMatchObject({ statusCode: 409 })
 	})
+
+	it('runs hooks inside the host’s own transaction when it supplies one', async () => {
+		const seen: unknown[] = []
+		app = await testHost(db, {
+			config: { creation: 'first-launch' },
+			signIn: testSignIn().signIn,
+			transaction: (fn) => db.transaction().execute((trx) => fn(trx, 'host-handle')),
+			hooks: {
+				accountCreated: async (_db, _id, host) => void seen.push(host),
+				signedIn: async (_db, _id, _profile, host) => void seen.push(host),
+			},
+		})
+		await apple(identity(), 'apple-host')
+		expect(seen).toEqual(['host-handle', 'host-handle'])
+	})
 })

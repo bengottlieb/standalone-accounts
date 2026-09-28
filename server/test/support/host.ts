@@ -8,6 +8,7 @@ import { HttpError } from '../../src/http/errors.js'
 import { registerAccountAdminRoutes, registerAccountRoutes } from '../../src/routes/register.js'
 import type { CheckInOptions } from '../../src/routes/check-in-route.js'
 import type { AcctHooks } from '../../src/core/hooks.js'
+import type { HostTransaction } from '../../src/core/transaction.js'
 import type { SignInOptions } from '../../src/signin/options.js'
 import { BUNDLE_ID, TEST_APP_APPLE_ID, testRoot } from './storekit.js'
 
@@ -42,6 +43,7 @@ export interface HostOptions {
 	checkIn?: Partial<CheckInOptions>
 	signIn?: SignInOptions
 	hooks?: AcctHooks
+	transaction?: HostTransaction
 }
 
 /**
@@ -67,6 +69,7 @@ export async function testHost(db: AcctDb, o: HostOptions = {}): Promise<Fastify
 		authRouteConfig: {},
 		signIn: o.signIn,
 		hooks: o.hooks,
+		transaction: o.transaction,
 		checkIn: { protocolVersions: ['v1'], builds: () => null, ...o.checkIn },
 	})
 	await registerAccountAdminRoutes(app, {

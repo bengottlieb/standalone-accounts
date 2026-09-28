@@ -7,6 +7,7 @@ import { isAnonymous } from '../core/merge.js'
 import { signInKinds } from '../signin/options.js'
 import { identityRoutes } from './identity-routes.js'
 import { revokeToken } from '../core/tokens.js'
+import { transactor } from '../core/transaction.js'
 import { memberSecurity, tags, type AcctRouteOptions } from './options.js'
 import { responders } from './respond.js'
 
@@ -18,6 +19,7 @@ async function signedIn(request: FastifyRequest) {
 /** `/api/accounts/v1/account`: the calling device's account, sign-out, and deletion. */
 export function acctAccountRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 	const { db } = o
+	const run = transactor(db, o.transaction)
 	const { schemas, summary } = responders(o)
 
 	app.get(
@@ -49,10 +51,10 @@ export function acctAccountRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 		},
 		async (request) => {
 			const account = request.account!
-			await db.transaction().execute(async (trx) => {
+			await run(async (trx, host) => {
 				// An anonymous account in a first-launch app can never be reached again once its device leaves: it goes.
 				if (o.config.creation === 'first-launch' && (await isAnonymous(trx, account.id, signInKinds(o.signIn))))
-					return deleteAccount(trx, account.id, 'device')
+					return deleteAccount(trx, account.id, 'device', o.hooks, host)
 				await revokeToken(trx, account.tokenId)
 				if (account.credentialHash)
 					await trx.deleteFrom('acct_device_credentials').where('secret_hash', '=', account.credentialHash).execute()
@@ -80,7 +82,7 @@ export function acctAccountRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 		},
 		async (request) => {
 			const accountId = request.account!.id
-			await db.transaction().execute((trx) => deleteAccount(trx, accountId, 'device'))
+			await run((trx, host) => deleteAccount(trx, accountId, 'device', o.hooks, host))
 			request.log.info({ accountId }, 'account deleted by its owner')
 			return { ok: true as const }
 		},

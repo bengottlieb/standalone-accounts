@@ -5,6 +5,7 @@ import { HttpError, parse } from '../http/errors.js'
 import { jsonSchema, okBody, responses } from '../http/schema.js'
 import { signInKinds } from '../signin/options.js'
 import { setPasswordBody, unlinkBody } from './contract.js'
+import { transactor } from '../core/transaction.js'
 import { memberSecurity, tags, type AcctRouteOptions } from './options.js'
 import { responders } from './respond.js'
 
@@ -15,6 +16,7 @@ async function signedIn(request: FastifyRequest) {
 /** The signed-in account's ways in: set or change its email and password, or remove a sign-in method. */
 export function identityRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 	const { db } = o
+	const run = transactor(db, o.transaction)
 	const { schemas, summary } = responders(o)
 
 	app.post(
@@ -34,7 +36,7 @@ export function identityRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 			if (!o.signIn?.password) throw new HttpError(404, 'signin_unavailable')
 			const body = parse(setPasswordBody, request.body)
 			const accountId = request.account!.id
-			await db.transaction().execute(async (trx) => {
+			await run(async (trx, host) => {
 				const current = await trx
 					.selectFrom('acct_passwords')
 					.select('password_hash')
@@ -67,7 +69,7 @@ export function identityRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 		async (request) => {
 			const { kind } = parse(unlinkBody, request.body)
 			const accountId = request.account!.id
-			await db.transaction().execute(async (trx) => {
+			await run(async (trx, host) => {
 				if (kind === 'password') await trx.deleteFrom('acct_passwords').where('account_id', '=', accountId).execute()
 				else if (signInKinds(o.signIn).includes(kind))
 					await trx.deleteFrom('acct_links').where('account_id', '=', accountId).where('kind', '=', kind).execute()

@@ -25,13 +25,18 @@ export async function isAnonymous(db: AcctDb, accountId: string, kinds: string[]
 }
 
 /**
- * Folds anonymous account `fromId` into `intoId` (docs/DESIGN.md "Sign-in"): the host moves its data first, then the
- * library moves purchases, grants, links, hints, devices and tokens, deletes `fromId` and recomputes access. Run inside
- * a transaction.
+ * Folds anonymous account `fromId` into `intoId` (docs/DESIGN.md "Sign-in"): the library moves purchases, grants,
+ * links, hints, devices and tokens first, then the host moves its data (its hook may delete its own row for `fromId`,
+ * which may take the account with it), then `fromId` is deleted and access recomputed. Run inside a transaction.
  */
-export async function mergeInto(db: AcctDb, fromId: string, intoId: string, actor: Actor, hooks?: AcctHooks) {
-	await hooks?.mergeAccounts?.(db, fromId, intoId)
-	const now = new Date()
+export async function mergeInto(
+	db: AcctDb,
+	fromId: string,
+	intoId: string,
+	actor: Actor,
+	hooks?: AcctHooks,
+	host?: unknown,
+) {
 	for (const table of [
 		'acct_purchases',
 		'acct_grants',
@@ -45,8 +50,9 @@ export async function mergeInto(db: AcctDb, fromId: string, intoId: string, acto
 	await sql`INSERT INTO acct_hints (account_id, kind, value, last_seen_at)
 		SELECT ${intoId}, kind, value, last_seen_at FROM acct_hints WHERE account_id = ${fromId}
 		ON CONFLICT (account_id, kind, value) DO NOTHING`.execute(db)
+	await hooks?.mergeAccounts?.(db, fromId, intoId, host)
 	await db.deleteFrom('acct_accounts').where('id', '=', fromId).execute()
 	await recordEvent(db, fromId, 'merged', actor, { into: intoId })
-	await recordEvent(db, intoId, 'merged', actor, { from: fromId, at: now.toISOString() })
+	await recordEvent(db, intoId, 'merged', actor, { from: fromId })
 	await refreshAccess(db, intoId, actor)
 }

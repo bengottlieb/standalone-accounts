@@ -7,11 +7,13 @@ import { createClaimCode } from '../core/claim.js'
 import { recordEvent } from '../core/events.js'
 import { addGrant, liftSuspensions, revokeGrant, suspend } from '../core/overrides.js'
 import * as s from './admin-schemas.js'
+import { transactor } from '../core/transaction.js'
 import { adminTags as tags, type AcctAdminOptions } from './options.js'
 
 /** Admin actions on one account. Each is written to its timeline with the admin who took it. */
 export function adminActionRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 	const { db, config, guards } = o
+	const inTransaction = transactor(db, o.transaction)
 	const BASE = `${o.adminPrefix ?? '/api/v1/admin'}/accounts/:id`
 
 	/** Registers a POST/DELETE action on an existing account, run in a transaction with the acting admin. */
@@ -44,7 +46,7 @@ export function adminActionRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 				const params = parse(meta.params ?? s.idParams, request.params) as Record<string, string>
 				const body = meta.body ? parse(meta.body, request.body) : undefined
 				const by = o.userId(request)
-				return db.transaction().execute(async (trx) => {
+				return inTransaction(async (trx) => {
 					const exists = await trx
 						.selectFrom('acct_accounts')
 						.select('id')
