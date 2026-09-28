@@ -12,8 +12,8 @@ contract:
 
 ## Using it
 
-- Swift: `.package(url: "https://github.com/bengottlieb/standalone-accounts", from: "0.2.0")`, product `AccountKit`.
-- Node: `"@standalone/accounts": "github:bengottlieb/standalone-accounts#v0.2.0"` (built on install by `prepare`, so
+- Swift: `.package(url: "https://github.com/bengottlieb/standalone-accounts", from: "0.3.0")`, product `AccountKit`.
+- Node: `"@standalone/accounts": "github:bengottlieb/standalone-accounts#v0.3.0"` (built on install by `prepare`, so
   the build image needs `git`). Tests: `TEST_DATABASE_URL=postgres://…/accounts_test npm test`.
 
 ## Changing the protocol

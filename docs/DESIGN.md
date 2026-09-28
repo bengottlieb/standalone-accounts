@@ -94,6 +94,34 @@ Admin creates an account (optionally with a grant) and gets a one-time code (`XX
 stored hashed) plus a deep link `<scheme>://claim?code=…`. Redeeming links the device secret and the app transaction.
 If that app transaction already belongs to another account → 409 `identity_in_use`; admin grants on that account.
 
+## Sign-in
+
+Optional per server (`registerAccountRoutes({ signIn })`); a method left out answers 404 `signin_unavailable`.
+StoreKeeper offers none; Crosswords and Peasel offer all three.
+
+- **Sign in with Apple** (`/auth/apple`): the identity token is verified against Apple's keys for the server's app
+  ids; link kind `apple` keyed by `sub`, the email kept as its label. The name Apple gives on first sign-in goes to the
+  host (`hooks.signedIn`).
+- **Email and password** (`/auth/password/register|signin|forgot|reset`, `/account/password`): `acct_passwords` holds
+  the lowercased email and a bcrypt hash. Registering an email that has an account signs in with the right password
+  and is 409 `email_in_use` otherwise. A reset code (six digits, one hour, one use) is emailed by the host
+  (`signIn.password.sendResetCode`); resetting spends every open code, revokes every token and signs this device in.
+- **Game Center** (`/auth/game-center`): the identity verification signature, checked with the certificate at Apple's
+  URL (not chain-verified); link kind `game_center` keyed by the team-scoped player id, the display name as label.
+- **Host-verified identities** (PZLServer's PuzzleAnywhere login): the host verifies, then `claimHostIdentity` applies
+  the rules below; their kinds are listed in `signIn.hostKinds` so they count as signed in.
+
+An account is **anonymous** when it has no password and no sign-in link. Signing in on a device:
+
+| Identity owned by | Device's account | Result |
+|---|---|---|
+| nobody | any (or none) | attached to the device's account (a new one when it has none) |
+| another account | anonymous | folded in: `hooks.mergeAccounts` moves host data, then purchases, grants, links, devices and tokens move and the anonymous account is deleted; `merged: true` |
+| another account | signed in | 409 `identity_in_use`: sign out first |
+
+Signing out of an anonymous account in a `first-launch` app deletes it; any other account keeps everything.
+`/account/unlink` removes a method. `AccountSummary.identities` lists the methods (`kind`, `label`).
+
 ## Admin
 
 Gated by the host's admin users (viewer = read-only).
