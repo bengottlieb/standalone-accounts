@@ -4,7 +4,9 @@ import { recordEvent, type Actor } from './events.js'
 import type { GrantSource } from '../db/tables.js'
 
 // Admin overrides (docs/DESIGN.md "Admin"): grants give access, suspensions take it away. Subscriptions are never
-// edited by hand. Each runs inside a transaction and recomputes effective access.
+// edited by hand. Each runs inside a transaction and recomputes effective access. Start times come from the same
+// clock the access check reads, never the database's `now()`: a database clock ahead of the app's would leave a
+// fresh grant or suspension not yet started.
 
 export async function addGrant(
 	db: AcctDb,
@@ -13,10 +15,12 @@ export async function addGrant(
 	actor: Actor,
 	createdBy: string | null,
 ) {
+	const now = new Date()
 	const row = await db
 		.insertInto('acct_grants')
 		.values({
 			account_id: accountId,
+			starts_at: now,
 			plan_id: g.planId,
 			source: g.source,
 			expires_at: g.expiresAt,
@@ -32,7 +36,7 @@ export async function addGrant(
 		expiresAt: g.expiresAt?.toISOString() ?? null,
 		note: g.note,
 	})
-	await refreshAccess(db, accountId, actor)
+	await refreshAccess(db, accountId, actor, now)
 	return row.id
 }
 
@@ -58,9 +62,10 @@ export async function suspend(
 	actor: Actor,
 	createdBy: string | null,
 ) {
+	const now = new Date()
 	const row = await db
 		.insertInto('acct_suspensions')
-		.values({ account_id: accountId, reason: s.reason, ends_at: s.endsAt, created_by: createdBy })
+		.values({ account_id: accountId, reason: s.reason, starts_at: now, ends_at: s.endsAt, created_by: createdBy })
 		.returning('id')
 		.executeTakeFirstOrThrow()
 	await recordEvent(db, accountId, 'suspended', actor, {
@@ -68,7 +73,7 @@ export async function suspend(
 		reason: s.reason,
 		endsAt: s.endsAt?.toISOString() ?? null,
 	})
-	await refreshAccess(db, accountId, actor)
+	await refreshAccess(db, accountId, actor, now)
 	return row.id
 }
 

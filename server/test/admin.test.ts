@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { StoreApi } from '../src/appstore/store-api.js'
 import { effectiveAccess } from '../src/core/access.js'
 import { issueToken } from '../src/core/tokens.js'
@@ -103,6 +103,19 @@ describe('admin accounts API', () => {
 		expect(detail.events.find((e: { kind: string }) => e.kind === 'grant_added')).toMatchObject({
 			actor: 'admin:admin-1',
 		})
+	})
+
+	it('takes effect at once when the app clock runs behind the database’s', async () => {
+		const made = (await post('/api/v1/admin/accounts', {})).json()
+		vi.useFakeTimers({ toFake: ['Date'], now: Date.now() - 5000 })
+		try {
+			await post(`/api/v1/admin/accounts/${made.id}/grants`, {})
+			expect((await get(`/api/v1/admin/accounts/${made.id}`)).json().account.status).toBe('granted')
+			await post(`/api/v1/admin/accounts/${made.id}/suspensions`, { reason: 'abuse' })
+			expect((await get(`/api/v1/admin/accounts/${made.id}`)).json().account.status).toBe('suspended')
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 
 	it('refreshes subscriptions from Apple, and says so when it has no key', async () => {
