@@ -117,6 +117,7 @@ An account is **anonymous** when it has no password and no sign-in link. Signing
 | Identity owned by | Device's account | Result |
 |---|---|---|
 | nobody | any (or none) | attached to the device's account (a new one when it has none) |
+| nobody | anonymous, but its verified app transaction belongs to a signed-in account with no method of this kind | that account takes the method and the anonymous one is folded into it; `merged: true` (a device that lost its session, e.g. across a host migration) |
 | another account | anonymous | folded in: `hooks.mergeAccounts` moves host data, then purchases, grants, links, devices and tokens move and the anonymous account is deleted; `merged: true` |
 | another account | signed in | 409 `identity_in_use`: sign out first |
 

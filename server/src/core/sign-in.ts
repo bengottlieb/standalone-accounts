@@ -5,7 +5,7 @@ import { createAccount } from './accounts.js'
 import { refreshAccess } from './access.js'
 import { recordEvent } from './events.js'
 import type { AcctHooks, SignInProfile } from './hooks.js'
-import { bindDevice, findAccount, lockIdentity, type DeviceIdentity } from './identity.js'
+import { appTransactionOwner, bindDevice, findAccount, lockIdentity, type DeviceIdentity } from './identity.js'
 import { isAnonymous, mergeInto } from './merge.js'
 
 export interface SignInContext {
@@ -27,7 +27,8 @@ export interface SignInResult {
 /**
  * Signs `device` in to the account that owns a proven identity (docs/DESIGN.md "Sign-in"):
  * - nobody owns it: `attach` adds it to the device's account (an anonymous one becomes signed in), or to a new account
- *   when the device has none;
+ *   when the device has none. An anonymous device whose app transaction belongs to a signed-in account without this
+ *   kind of method (a device that lost its session) is folded into that account, which takes the method instead;
  * - another account owns it and the device's account is anonymous: that account is folded in;
  * - another account owns it and the device's account is signed in: 409 `identity_in_use`.
  * Then the device is bound to the account. Run inside a transaction, holding a lock on the identity.
@@ -43,6 +44,7 @@ export async function signInWith(
 	let accountId: string
 	let isNew = false
 	let merged = false
+	let home: string | null = null
 	if (owner) {
 		if (current && current !== owner) {
 			if (!(await isAnonymous(ctx.db, current, ctx.kinds)))
@@ -56,6 +58,11 @@ export async function signInWith(
 			merged = true
 		}
 		accountId = owner
+	} else if (current && (home = await appTransactionHome(ctx, device, current, profile.method))) {
+		await mergeInto(ctx.db, current, home, 'device', ctx.hooks, ctx.host)
+		merged = true
+		accountId = home
+		await attach(accountId)
 	} else {
 		accountId = current ?? (await createAccount(ctx.db, ctx.config, 'device', profile.method, ctx.hooks, ctx.host)).id
 		isNew = !current
@@ -66,6 +73,23 @@ export async function signInWith(
 	await ctx.hooks?.signedIn?.(ctx.db, accountId, { ...profile, isNew }, ctx.host)
 	await refreshAccess(ctx.db, accountId, 'device')
 	return { accountId, isNew, merged } satisfies SignInResult
+}
+
+/**
+ * The signed-in account the device's verified app transaction belongs to, when the device's own account is anonymous
+ * and that account has no `method` yet: where a method nobody owns belongs, rather than on the anonymous account.
+ */
+async function appTransactionHome(ctx: SignInContext, device: DeviceIdentity, current: string, method: string) {
+	if (!device.appTransactionId) return null
+	await lockIdentity(ctx.db, `app_transaction:${device.appTransactionId}`)
+	const holder = await appTransactionOwner(ctx.db, device)
+	if (!holder || holder === current) return null
+	if (!(await isAnonymous(ctx.db, current, ctx.kinds)) || (await isAnonymous(ctx.db, holder, ctx.kinds))) return null
+	const existing =
+		method === 'password'
+			? await ctx.db.selectFrom('acct_passwords').select('account_id').where('account_id', '=', holder).executeTakeFirst()
+			: await ctx.db.selectFrom('acct_links').select('account_id').where('account_id', '=', holder).where('kind', '=', method).executeTakeFirst()
+	return existing ? null : holder
 }
 
 /** The account a link (`kind`, `value`) belongs to, if any. */
