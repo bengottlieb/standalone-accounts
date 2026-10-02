@@ -110,6 +110,7 @@ StoreKeeper offers none; Crosswords and Peasel offer all three.
   URL (not chain-verified); link kind `game_center` keyed by the team-scoped player id, the display name as label.
 - **Host-verified identities** (PZLServer's PuzzleAnywhere login): the host verifies, then `claimHostIdentity` applies
   the rules below; their kinds are listed in `signIn.hostKinds` so they count as signed in.
+- **Passkeys**: planned, not built; see `docs/PASSKEYS.md`.
 
 An account is **anonymous** when it has no password and no sign-in link. Signing in on a device:
 
