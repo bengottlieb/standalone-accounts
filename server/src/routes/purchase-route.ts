@@ -50,7 +50,7 @@ export function purchaseRoute(app: FastifyInstance, o: AcctRouteOptions, identit
 			const revoked = verified.filter((p) => p.revokedAt)
 			for (const p of revoked) {
 				const owner = await revokePurchase(db, p.tx.originalTransactionId, p.revokedAt!)
-				if (owner) await refreshAccess(db, owner, 'apple')
+				if (owner) await refreshAccess(db, owner, 'apple', new Date(), o.hooks)
 			}
 			const purchases = verified.filter((p) => !p.revokedAt)
 			if (!purchases.length) {
@@ -79,7 +79,7 @@ export function purchaseRoute(app: FastifyInstance, o: AcctRouteOptions, identit
 						})
 				}
 				await bindDevice(trx, accountId, identity)
-				await refreshAccess(trx, accountId, 'device')
+				await refreshAccess(trx, accountId, 'device', new Date(), o.hooks, host)
 				return { accountId, isNew: !found && !owner }
 			})
 			request.log.info({ accountId: bound.accountId, isNew: bound.isNew }, 'purchase attached')

@@ -1,4 +1,5 @@
-import type { AcctDb } from '../db/tables.js'
+import type { AccountStatus, AcctDb } from '../db/tables.js'
+import type { Actor } from './events.js'
 
 /** How someone signed in, and what the method told us about them. */
 export interface SignInProfile {
@@ -12,6 +13,15 @@ export interface SignInProfile {
 	 */
 	password?: string
 	isNew: boolean
+}
+
+/** What `refreshAccess` found different about an account's effective access. */
+export interface AccessChange {
+	from: AccountStatus
+	to: AccountStatus
+	plan: string | null
+	expiresAt: Date | null
+	actor: Actor
 }
 
 /**
@@ -33,4 +43,10 @@ export interface AcctHooks {
 	passwordReset?: (db: AcctDb, accountId: string, host: unknown) => Promise<void>
 	/** An account is about to be deleted (by its owner or an admin); throw to refuse (PZLServer keeps admins). */
 	accountDeleting?: (db: AcctDb, accountId: string, host: unknown) => Promise<void>
+	/**
+	 * The account's effective access (status, plan, expiry or renewal) just changed: a grant, suspension, purchase,
+	 * App Store notification, admin refresh, merge or the sweep. Runs in the same transaction as the change, so the
+	 * host can queue a push to the account's devices (AppOutlet) and have it go only if the change commits.
+	 */
+	accessChanged?: (db: AcctDb, accountId: string, change: AccessChange, host: unknown) => Promise<void>
 }

@@ -7,6 +7,7 @@ import type { Updateable } from 'kysely'
 import type { AcctDb, AcctPurchasesTable, PurchaseType, StoreEnvironment } from '../db/tables.js'
 import { refreshAccess } from './access.js'
 import { initialStatus, planForProduct, purchaseType } from './purchases.js'
+import type { AcctHooks } from './hooks.js'
 
 export interface VerifiedNotification {
 	payload: ResponseBodyV2DecodedPayload
@@ -95,7 +96,7 @@ export function purchasePatch(
  * unclaimed purchase (no account): the app's `/auth/purchase` claims it, or an admin does. One whose
  * `appAccountToken` names an existing account is attached to it straight away.
  */
-export async function processNotification(db: AcctDb, n: VerifiedNotification, now = new Date()) {
+export async function processNotification(db: AcctDb, n: VerifiedNotification, now = new Date(), hooks?: AcctHooks) {
 	const { payload, transaction: tx } = n
 	const uuid = payload.notificationUUID!
 	const type = String(payload.notificationType)
@@ -174,7 +175,7 @@ export async function processNotification(db: AcctDb, n: VerifiedNotification, n
 		if (RECORD_ONLY.has(type)) return finish('recorded', accountId)
 		const patch = purchasePatch(n, purchase, planId, now)
 		if (!patch) {
-			if (accountId) await refreshAccess(trx, accountId, 'apple', now)
+			if (accountId) await refreshAccess(trx, accountId, 'apple', now, hooks)
 			return finish('recorded', accountId)
 		}
 		await trx
@@ -182,7 +183,7 @@ export async function processNotification(db: AcctDb, n: VerifiedNotification, n
 			.set({ ...patch, last_event_at: signedAt, updated_at: now })
 			.where('id', '=', purchase.id)
 			.execute()
-		if (accountId) await refreshAccess(trx, accountId, 'apple', now)
+		if (accountId) await refreshAccess(trx, accountId, 'apple', now, hooks)
 		return finish('applied', accountId)
 	})
 }

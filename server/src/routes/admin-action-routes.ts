@@ -28,6 +28,7 @@ export function adminActionRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 			params: Record<string, string>
 			by: string
 			actor: `admin:${string}`
+			host: unknown
 		}) => Promise<unknown>,
 	) {
 		app[method](
@@ -46,7 +47,7 @@ export function adminActionRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 				const params = parse(meta.params ?? s.idParams, request.params) as Record<string, string>
 				const body = meta.body ? parse(meta.body, request.body) : undefined
 				const by = o.userId(request)
-				return inTransaction(async (trx) => {
+				return inTransaction(async (trx, host) => {
 					const exists = await trx
 						.selectFrom('acct_accounts')
 						.select('id')
@@ -54,7 +55,7 @@ export function adminActionRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 						.forUpdate()
 						.executeTakeFirst()
 					if (!exists) throw new HttpError(404, 'account_not_found')
-					return run({ trx, accountId: params.id!, body: body as z.infer<B>, params, by, actor: `admin:${by}` })
+					return run({ trx, accountId: params.id!, body: body as z.infer<B>, params, by, actor: `admin:${by}`, host })
 				})
 			},
 		)
@@ -79,6 +80,8 @@ export function adminActionRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 					{ planId: c.body.plan, source: c.body.source, expiresAt: c.body.expiresAt, note: c.body.note },
 					c.actor,
 					c.by,
+					o.hooks,
+					c.host,
 				),
 			}
 		},
@@ -89,7 +92,7 @@ export function adminActionRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 		'/grants/:grantId',
 		{ operationId: 'revokeGrant', summary: 'End a grant now', response: okBody, params: s.grantParams },
 		async (c) => {
-			if (!(await revokeGrant(c.trx, c.accountId, c.params.grantId!, c.actor)))
+			if (!(await revokeGrant(c.trx, c.accountId, c.params.grantId!, c.actor, o.hooks, c.host)))
 				throw new HttpError(404, 'grant_not_found')
 			return { ok: true as const }
 		},
@@ -105,7 +108,15 @@ export function adminActionRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 			response: s.idResponse,
 		},
 		async (c) => ({
-			id: await suspend(c.trx, c.accountId, { reason: c.body.reason, endsAt: c.body.endsAt }, c.actor, c.by),
+			id: await suspend(
+				c.trx,
+				c.accountId,
+				{ reason: c.body.reason, endsAt: c.body.endsAt },
+				c.actor,
+				c.by,
+				o.hooks,
+				c.host,
+			),
 		}),
 	)
 
@@ -114,7 +125,8 @@ export function adminActionRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 		'/suspensions',
 		{ operationId: 'liftSuspension', summary: 'Lift the account’s suspension', response: okBody },
 		async (c) => {
-			if (!(await liftSuspensions(c.trx, c.accountId, c.actor))) throw new HttpError(404, 'not_suspended')
+			if (!(await liftSuspensions(c.trx, c.accountId, c.actor, o.hooks, c.host)))
+				throw new HttpError(404, 'not_suspended')
 			return { ok: true as const }
 		},
 	)
@@ -174,7 +186,7 @@ export function adminActionRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 			errors: [503],
 		},
 		async (c) => ({
-			subscriptions: await refreshFromApple(c.trx, o.storeApi, o.appStore, c.accountId, c.actor),
+			subscriptions: await refreshFromApple(c.trx, o.storeApi, o.appStore, c.accountId, c.actor, o.hooks, c.host),
 		}),
 	)
 }

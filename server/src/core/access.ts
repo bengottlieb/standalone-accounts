@@ -1,6 +1,7 @@
 import type { Selectable } from 'kysely'
 import type { AcctDb } from '../db/tables.js'
 import { recordEvent, type Actor } from './events.js'
+import type { AcctHooks } from './hooks.js'
 import type { AcctAccountsTable, AcctGrantsTable, AcctPurchasesTable } from '../db/tables.js'
 
 type Access = Pick<
@@ -60,12 +61,22 @@ export function effectiveAccess(subs: Purchase[], grants: Grant[], suspended: bo
 	return lapsed ? fromPurchase(lapsed, lapsed.status) : NONE
 }
 
-/** Recomputes and stores the account's effective access, recording a change. Returns the new status. */
-export async function refreshAccess(db: AcctDb, accountId: string, actor: Actor = 'system', now = new Date()) {
+/**
+ * Recomputes and stores the account's effective access, recording a status or plan change on the timeline and telling
+ * the host's `accessChanged` hook about any change at all (a renewal moves only the expiry). Returns the new status.
+ */
+export async function refreshAccess(
+	db: AcctDb,
+	accountId: string,
+	actor: Actor = 'system',
+	now = new Date(),
+	hooks?: AcctHooks,
+	host?: unknown,
+) {
 	const [account, subs, grants, suspension] = await Promise.all([
 		db
 			.selectFrom('acct_accounts')
-			.select(['status', 'plan_id', 'access_expires_at'])
+			.select(['status', 'plan_id', 'access_source', 'access_expires_at', 'access_will_renew'])
 			.where('id', '=', accountId)
 			.forUpdate()
 			.executeTakeFirst(),
@@ -93,5 +104,18 @@ export async function refreshAccess(db: AcctDb, accountId: string, actor: Actor 
 			to: access.status,
 			plan: access.plan_id,
 		})
+	if (
+		access.status !== account.status ||
+		access.plan_id !== account.plan_id ||
+		access.access_source !== account.access_source ||
+		time(access.access_expires_at) !== time(account.access_expires_at) ||
+		access.access_will_renew !== account.access_will_renew
+	)
+		await hooks?.accessChanged?.(
+			db,
+			accountId,
+			{ from: account.status, to: access.status, plan: access.plan_id, expiresAt: access.access_expires_at, actor },
+			host,
+		)
 	return access.status
 }

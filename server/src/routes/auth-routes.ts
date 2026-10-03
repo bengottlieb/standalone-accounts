@@ -73,7 +73,7 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				if (found && found.accountId !== claimed) throw new HttpError(409, 'identity_in_use')
 				await bindDevice(trx, claimed, identity, { strict: true })
 				await recordEvent(trx, claimed, 'claimed', 'device', { platform: identity.platform })
-				await refreshAccess(trx, claimed, 'device')
+				await refreshAccess(trx, claimed, 'device', new Date(), o.hooks, host)
 				return claimed
 			})
 			return authResponse(accountId, identity.secretHash, identity.deviceName, false)

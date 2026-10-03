@@ -71,7 +71,7 @@ export async function signInWith(
 	await bindDevice(ctx.db, accountId, device)
 	await recordEvent(ctx.db, accountId, 'signed_in', 'device', { method: profile.method })
 	await ctx.hooks?.signedIn?.(ctx.db, accountId, { ...profile, isNew }, ctx.host)
-	await refreshAccess(ctx.db, accountId, 'device')
+	await refreshAccess(ctx.db, accountId, 'device', new Date(), ctx.hooks, ctx.host)
 	return { accountId, isNew, merged } satisfies SignInResult
 }
 
@@ -87,8 +87,17 @@ async function appTransactionHome(ctx: SignInContext, device: DeviceIdentity, cu
 	if (!(await isAnonymous(ctx.db, current, ctx.kinds)) || (await isAnonymous(ctx.db, holder, ctx.kinds))) return null
 	const existing =
 		method === 'password'
-			? await ctx.db.selectFrom('acct_passwords').select('account_id').where('account_id', '=', holder).executeTakeFirst()
-			: await ctx.db.selectFrom('acct_links').select('account_id').where('account_id', '=', holder).where('kind', '=', method).executeTakeFirst()
+			? await ctx.db
+					.selectFrom('acct_passwords')
+					.select('account_id')
+					.where('account_id', '=', holder)
+					.executeTakeFirst()
+			: await ctx.db
+					.selectFrom('acct_links')
+					.select('account_id')
+					.where('account_id', '=', holder)
+					.where('kind', '=', method)
+					.executeTakeFirst()
 	return existing ? null : holder
 }
 

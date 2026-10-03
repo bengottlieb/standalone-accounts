@@ -6,6 +6,7 @@ import { recordEvent, type Actor } from '../core/events.js'
 import { planForProduct } from '../core/purchases.js'
 import type { PurchaseStatus } from '../db/tables.js'
 import type { StoreApi } from '../appstore/store-api.js'
+import type { AcctHooks } from '../core/hooks.js'
 
 const STATUS: Record<number, PurchaseStatus> = { 1: 'active', 2: 'expired', 3: 'expired', 4: 'grace', 5: 'revoked' }
 const date = (ms: number | undefined) => (ms === undefined ? null : new Date(ms))
@@ -21,6 +22,8 @@ export async function refreshFromApple(
 	verifier: AppStoreVerifier,
 	accountId: string,
 	actor: Actor,
+	hooks?: AcctHooks,
+	host?: unknown,
 ) {
 	if (!api) throw new HttpError(503, 'appstore_api_unconfigured')
 	const subs = await db.selectFrom('acct_purchases').selectAll().where('account_id', '=', accountId).execute()
@@ -53,6 +56,6 @@ export async function refreshFromApple(
 		}
 	}
 	await recordEvent(db, accountId, 'refreshed_from_apple', actor, { subscriptions: updated })
-	await refreshAccess(db, accountId, actor)
+	await refreshAccess(db, accountId, actor, new Date(), hooks, host)
 	return updated
 }

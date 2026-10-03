@@ -1,5 +1,6 @@
 import type { AcctDb } from '../db/tables.js'
 import { refreshAccess } from './access.js'
+import type { AcctHooks } from './hooks.js'
 
 /**
  * Nightly catch-up for missed App Store notifications and for time-bound overrides: active subscriptions more than
@@ -7,7 +8,7 @@ import { refreshAccess } from './access.js'
  * or suspended access is recomputed, so ended grants and suspensions take effect. Nothing is deleted; tracked apps
  * simply leave the collection set.
  */
-export async function runAccountSweep(db: AcctDb, leewayHours: number, now = new Date()) {
+export async function runAccountSweep(db: AcctDb, leewayHours: number, now = new Date(), hooks?: AcctHooks) {
 	const lapsed = await db
 		.updateTable('acct_purchases')
 		.set({ status: 'expired', updated_at: now })
@@ -27,7 +28,7 @@ export async function runAccountSweep(db: AcctDb, leewayHours: number, now = new
 		.execute()
 	let changed = 0
 	for (const { id, status } of accounts) {
-		const next = await db.transaction().execute((trx) => refreshAccess(trx, id, 'system', now))
+		const next = await db.transaction().execute((trx) => refreshAccess(trx, id, 'system', now, hooks))
 		if (next !== status) changed++
 	}
 	return {

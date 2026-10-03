@@ -2,6 +2,7 @@ import type { AcctDb } from '../db/tables.js'
 import { refreshAccess } from './access.js'
 import { recordEvent, type Actor } from './events.js'
 import type { GrantSource } from '../db/tables.js'
+import type { AcctHooks } from './hooks.js'
 
 // Admin overrides (docs/DESIGN.md "Admin"): grants give access, suspensions take it away. Subscriptions are never
 // edited by hand. Each runs inside a transaction and recomputes effective access. Start times come from the same
@@ -14,6 +15,8 @@ export async function addGrant(
 	g: { planId: string; source: GrantSource; expiresAt: Date | null; note: string | null },
 	actor: Actor,
 	createdBy: string | null,
+	hooks?: AcctHooks,
+	host?: unknown,
 ) {
 	const now = new Date()
 	const row = await db
@@ -36,11 +39,18 @@ export async function addGrant(
 		expiresAt: g.expiresAt?.toISOString() ?? null,
 		note: g.note,
 	})
-	await refreshAccess(db, accountId, actor, now)
+	await refreshAccess(db, accountId, actor, now, hooks, host)
 	return row.id
 }
 
-export async function revokeGrant(db: AcctDb, accountId: string, grantId: string, actor: Actor) {
+export async function revokeGrant(
+	db: AcctDb,
+	accountId: string,
+	grantId: string,
+	actor: Actor,
+	hooks?: AcctHooks,
+	host?: unknown,
+) {
 	const row = await db
 		.updateTable('acct_grants')
 		.set({ revoked_at: new Date() })
@@ -51,7 +61,7 @@ export async function revokeGrant(db: AcctDb, accountId: string, grantId: string
 		.executeTakeFirst()
 	if (!row) return false
 	await recordEvent(db, accountId, 'grant_revoked', actor, { grantId })
-	await refreshAccess(db, accountId, actor)
+	await refreshAccess(db, accountId, actor, new Date(), hooks, host)
 	return true
 }
 
@@ -61,6 +71,8 @@ export async function suspend(
 	s: { reason: string; endsAt: Date | null },
 	actor: Actor,
 	createdBy: string | null,
+	hooks?: AcctHooks,
+	host?: unknown,
 ) {
 	const now = new Date()
 	const row = await db
@@ -73,12 +85,12 @@ export async function suspend(
 		reason: s.reason,
 		endsAt: s.endsAt?.toISOString() ?? null,
 	})
-	await refreshAccess(db, accountId, actor, now)
+	await refreshAccess(db, accountId, actor, now, hooks, host)
 	return row.id
 }
 
 /** Lifts every open suspension on the account. */
-export async function liftSuspensions(db: AcctDb, accountId: string, actor: Actor) {
+export async function liftSuspensions(db: AcctDb, accountId: string, actor: Actor, hooks?: AcctHooks, host?: unknown) {
 	const lifted = await db
 		.updateTable('acct_suspensions')
 		.set({ lifted_at: new Date() })
@@ -88,6 +100,6 @@ export async function liftSuspensions(db: AcctDb, accountId: string, actor: Acto
 		.execute()
 	if (!lifted.length) return false
 	await recordEvent(db, accountId, 'suspension_lifted', actor, { count: lifted.length })
-	await refreshAccess(db, accountId, actor)
+	await refreshAccess(db, accountId, actor, new Date(), hooks, host)
 	return true
 }

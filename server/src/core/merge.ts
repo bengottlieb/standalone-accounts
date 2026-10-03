@@ -54,5 +54,5 @@ export async function mergeInto(
 	await db.deleteFrom('acct_accounts').where('id', '=', fromId).execute()
 	await recordEvent(db, fromId, 'merged', actor, { into: intoId })
 	await recordEvent(db, intoId, 'merged', actor, { from: fromId })
-	await refreshAccess(db, intoId, actor)
+	await refreshAccess(db, intoId, actor, new Date(), hooks, host)
 }

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { StoreApi } from '../src/appstore/store-api.js'
 import { effectiveAccess } from '../src/core/access.js'
+import type { AccessChange } from '../src/core/hooks.js'
 import { issueToken } from '../src/core/tokens.js'
 import { reset, testDb } from './support/db.js'
 import { ADMIN, CONFIG, testHost, VIEWER } from './support/host.js'
@@ -82,6 +83,33 @@ describe('admin accounts API', () => {
 			purchases: [{ type: 'non_consumable', productId: LIFETIME, status: 'active', expiresAt: null }],
 		})
 		expect(JSON.stringify(body)).not.toMatch(/hash|secret/)
+	})
+
+	/** AppOutlet pushes the app on every change; a recompute that changes nothing must stay quiet. */
+	it('tells the host’s accessChanged hook about each change, in the change’s transaction', async () => {
+		const changes: AccessChange[] = []
+		const hosts: unknown[] = []
+		app = await testHost(db, {
+			storeApi: apple,
+			transaction: (fn) => db.transaction().execute((trx) => fn(trx, 'host-handle')),
+			hooks: { accessChanged: async (_db, _id, change, host) => void (changes.push(change), hosts.push(host)) },
+		})
+		const made = (await post('/api/v1/admin/accounts', {})).json()
+		await post(`/api/v1/admin/accounts/${made.id}/notes`, { text: 'press' })
+		expect(changes).toEqual([])
+		await post(`/api/v1/admin/accounts/${made.id}/grants`, { note: 'press' })
+		expect(changes).toMatchObject([
+			{ from: 'none', to: 'granted', plan: 'pro', expiresAt: null, actor: 'admin:admin-1' },
+		])
+		await post(`/api/v1/admin/accounts/${made.id}/grants`, { note: 'again' })
+		expect(changes).toHaveLength(1)
+		await post(`/api/v1/admin/accounts/${made.id}/suspensions`, { reason: 'abuse' })
+		await del(`/api/v1/admin/accounts/${made.id}/suspensions`)
+		expect(changes.slice(1)).toMatchObject([
+			{ from: 'granted', to: 'suspended', plan: null },
+			{ from: 'suspended', to: 'granted', plan: 'pro' },
+		])
+		expect(hosts).toEqual(['host-handle', 'host-handle', 'host-handle'])
 	})
 
 	it('grants and suspends, with the admin on the timeline', async () => {

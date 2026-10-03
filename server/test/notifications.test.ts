@@ -50,6 +50,26 @@ describe('App Store notifications', () => {
 		expect(await status(owner.id)).toBe('active')
 	})
 
+	/** A renewal keeps the status and moves the expiry; the app still wants to hear, a preference change it doesn't. */
+	it('tells the accessChanged hook about renewals, not about record-only notifications', async () => {
+		const owner = await createAccount(db, CONFIG, 'system', 'test')
+		const changes: { to: string; expiresAt: Date | null }[] = []
+		const hooks = {
+			accessChanged: async (_db: unknown, _id: string, c: { to: string; expiresAt: Date | null }) =>
+				void changes.push(c),
+		}
+		const tx = (expiresDate: number) =>
+			transaction({ originalTransactionId: 'r1', appAccountToken: owner.id, expiresDate })
+		const first = Date.now() + DAY
+		await processNotification(db, notification('SUBSCRIBED', tx(first)), new Date(), hooks)
+		await processNotification(db, notification('DID_CHANGE_RENEWAL_PREF', tx(first)), new Date(), hooks)
+		await processNotification(db, notification('DID_RENEW', tx(first + 30 * DAY)), new Date(), hooks)
+		expect(changes.map((c) => [c.to, c.expiresAt?.getTime()])).toEqual([
+			['active', first],
+			['active', first + 30 * DAY],
+		])
+	})
+
 	it('handles one-time purchases: bought, refunded, reversed', async () => {
 		const owner = await createAccount(db, CONFIG, 'system', 'test')
 		const tx = (o: Record<string, unknown> = {}) =>
@@ -118,11 +138,17 @@ describe('App Store notifications', () => {
 				}),
 			),
 		)
-		expect(await runAccountSweep(db, 0, new Date(now.getTime() + 2 * DAY))).toMatchObject({
+		const changes: string[] = []
+		const hooks = {
+			accessChanged: async (_db: unknown, id: string, c: { from: string; to: string }) =>
+				void changes.push(`${id}:${c.from}>${c.to}`),
+		}
+		expect(await runAccountSweep(db, 0, new Date(now.getTime() + 2 * DAY), hooks)).toMatchObject({
 			expiredActive: 1,
 			accessChanged: 1,
 		})
 		expect(await status(owner.id)).toBe('expired')
+		expect(changes).toEqual([`${owner.id}:active>expired`])
 		expect(await status(buyer.id)).toBe('active')
 	})
 })

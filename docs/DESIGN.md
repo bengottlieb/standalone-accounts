@@ -168,7 +168,10 @@ apps has two accounts unless a verified shared link (Sign in with Apple, Game Ce
 A host provides: `request.account` from `resolveToken` in its auth hook; `registerAccountRoutes` (check-in, auth,
 account) with its build policy and optional account `extras`; `registerAccountAdminRoutes` with its admin guards, and
 optionally a search hook and admin names; an App Store notifications endpoint that verifies with `AppStoreVerifier` and
-calls `processNotification`; a nightly `runAccountSweep`. Its own user data references `acct_accounts(id)`.
+calls `processNotification`; a nightly `runAccountSweep`. Its own user data references `acct_accounts(id)`. Hooks
+(`AcctHooks`) tell it about accounts it must mirror: created, merged, signed in, password reset, deleting, and
+`accessChanged` whenever effective access moves (status, plan, expiry or renewal), inside the change's transaction,
+so AppOutlet can queue a silent push that has the app re-read its account.
 
 ## Rollout
 

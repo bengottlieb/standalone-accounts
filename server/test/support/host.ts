@@ -87,6 +87,8 @@ export async function testHost(db: AcctDb, o: HostOptions = {}): Promise<Fastify
 			},
 		},
 		userId: (request) => admin(request)!,
+		hooks: o.hooks,
+		transaction: o.transaction,
 	})
 	return app
 }

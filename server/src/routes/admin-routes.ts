@@ -91,6 +91,8 @@ export function acctAdminRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 						},
 						actor(by),
 						by,
+						o.hooks,
+						host,
 					)
 				const claim = await createClaimCode(trx, config, account.id, actor(by), by)
 				return {
@@ -193,7 +195,7 @@ export function acctAdminRoutes(app: FastifyInstance, o: AcctAdminOptions) {
 				await recordEvent(trx, accountId, 'purchase_attached', actor(o.userId(request)), {
 					originalTransactionId: sub.original_transaction_id,
 				})
-				await refreshAccess(trx, accountId, actor(o.userId(request)))
+				await refreshAccess(trx, accountId, actor(o.userId(request)), new Date(), o.hooks, host)
 			})
 			return { ok: true as const }
 		},
