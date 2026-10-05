@@ -9,6 +9,18 @@ const RESET_MS = 60 * 60 * 1000
 
 export const normalizeEmail = (email: string) => email.trim().toLowerCase()
 
+/** The shortest password a new one may be unless the host sets `signIn.password.minLength`. */
+export const DEFAULT_MIN_PASSWORD_LENGTH = 8
+
+/**
+ * 400 `password_too_short` (with `minLength`) for a password being set that's under the host's minimum. Only checked
+ * when a password is set (register, reset, change), never at sign-in: an existing password keeps working whatever the
+ * policy has become since.
+ */
+export function checkNewPassword(password: string, minLength = DEFAULT_MIN_PASSWORD_LENGTH) {
+	if (password.length < minLength) throw new HttpError(400, 'password_too_short', {}, { minLength })
+}
+
 /** The account an email signs in to, with its hash. */
 export async function passwordAccount(db: AcctDb, email: string) {
 	return db.selectFrom('acct_passwords').selectAll().where('email', '=', normalizeEmail(email)).executeTakeFirst()

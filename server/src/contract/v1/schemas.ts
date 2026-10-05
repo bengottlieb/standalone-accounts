@@ -83,11 +83,15 @@ export const AppleSignInRequest = z.strictObject({
 	identityToken: z.string().min(1).max(10_000),
 	name: z.string().max(200).optional(),
 })
+/** Shown on every password field: where the length rule applies. */
+const NEW_PASSWORD =
+	'A new password (register, reset, change) must be at least the server’s minimum (default 8), or 400 ' +
+	'`password_too_short` with `minLength`; signing in never checks length.'
 /** Email and password: register (or sign in to an existing account with the right password), or sign in. */
 export const PasswordRequest = z.strictObject({
 	identity: Identity,
 	email: z.email().max(320),
-	password: z.string().min(8).max(200),
+	password: z.string().min(1).max(200).meta({ description: NEW_PASSWORD }),
 })
 /** Asks for a reset code by email. Always answers `{ ok: true }`, whether or not the email has an account. */
 export const ForgotPasswordRequest = z.strictObject({ email: z.email().max(320) })
@@ -96,7 +100,7 @@ export const ResetPasswordRequest = z.strictObject({
 	identity: Identity,
 	email: z.email().max(320),
 	code: z.string().min(1).max(20),
-	password: z.string().min(8).max(200),
+	password: z.string().min(1).max(200).meta({ description: NEW_PASSWORD }),
 })
 /** `GKLocalPlayer.fetchItems(forIdentityVerificationSignature:)`, with signature and salt base64-encoded. */
 export const GameCenterSignInRequest = z.strictObject({
@@ -113,7 +117,7 @@ export const GameCenterSignInRequest = z.strictObject({
 /** Changes (or, for an account without one, adds) the email and password of the signed-in account. */
 export const SetPasswordRequest = z.strictObject({
 	email: z.email().max(320),
-	password: z.string().min(8).max(200),
+	password: z.string().min(1).max(200).meta({ description: NEW_PASSWORD }),
 	currentPassword: z.string().max(200).optional(),
 })
 /** Removes one way of signing in (`apple`, `game_center`, …) from the signed-in account. */
@@ -145,8 +149,14 @@ export const ErrorCode = z.enum([
 	'invalid_credentials',
 	'email_in_use',
 	'signin_unavailable',
+	'password_too_short',
 ])
-export const ErrorResponse = z.strictObject({ error: ErrorCode, message: z.string().optional() })
+export const ErrorResponse = z.strictObject({
+	error: ErrorCode,
+	message: z.string().optional(),
+	/** With `password_too_short`: the server's minimum length. */
+	minLength: z.number().int().optional(),
+})
 
 export type Identity = z.infer<typeof Identity>
 export type Access = z.infer<typeof Access>

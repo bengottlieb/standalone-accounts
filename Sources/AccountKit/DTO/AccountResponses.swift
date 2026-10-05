@@ -51,12 +51,14 @@ public struct AccountOKResponse: Codable, Sendable, Equatable {
 public struct AccountErrorResponse: Codable, Sendable, Equatable, Error {
 	public var error: AccountErrorCode
 	public var message: String?
+	/// With `passwordTooShort`: the server's minimum length, for the message to show.
+	public var minLength: Int?
 }
 
 public enum AccountErrorCode: Codable, Sendable, Hashable {
 	case invalidRequest, unauthorized, accountSuspended, purchaseInUse, identityInUse, transactionInvalid, transactionRevoked
 	case codeNotFound, codeExpired, rateLimited, verificationUnavailable
-	case invalidCredentials, emailInUse, signinUnavailable
+	case invalidCredentials, emailInUse, signinUnavailable, passwordTooShort
 	/// A code this build doesn't know yet; the server may add codes.
 	case other(String)
 
@@ -66,6 +68,7 @@ public enum AccountErrorCode: Codable, Sendable, Hashable {
 		"transaction_revoked": .transactionRevoked, "code_not_found": .codeNotFound, "code_expired": .codeExpired,
 		"rate_limited": .rateLimited, "verification_unavailable": .verificationUnavailable,
 		"invalid_credentials": .invalidCredentials, "email_in_use": .emailInUse, "signin_unavailable": .signinUnavailable,
+		"password_too_short": .passwordTooShort,
 	]
 
 	public var rawValue: String {

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { verifyIdentity } from '../core/device-identity.js'
 import { lockIdentity } from '../core/identity.js'
 import {
+	checkNewPassword,
 	createResetCode,
 	normalizeEmail,
 	passwordAccount,
@@ -13,7 +14,7 @@ import { signInWith, type SignInContext } from '../core/sign-in.js'
 import { revokeAllTokens } from '../core/tokens.js'
 import { guessLimiter } from '../core/guesses.js'
 import { HttpError, parse } from '../http/errors.js'
-import { jsonSchema, okBody, responses } from '../http/schema.js'
+import { jsonSchema, okBody, passwordBadRequest, responses } from '../http/schema.js'
 import { forgotPasswordBody, passwordBody, resetPasswordBody } from './contract.js'
 import { transactor } from '../core/transaction.js'
 import { tags, type AcctRouteOptions } from './options.js'
@@ -44,7 +45,7 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 				operationId,
 				security: [],
 				body: jsonSchema(body),
-				response: responses(ok, 400, 401, 404, 409, 410, 429),
+				response: responses(ok, passwordBadRequest, 401, 404, 409, 410, 429),
 			},
 		},
 	})
@@ -67,6 +68,7 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 				throw register ? new HttpError(409, 'email_in_use') : new HttpError(401, 'invalid_credentials')
 			}
 			if (!existing && !register) throw new HttpError(401, 'invalid_credentials')
+			if (!existing) checkNewPassword(body.password, signIn?.password?.minLength)
 			return signInWith(
 				{ ...ctx, db: trx, host },
 				device,
@@ -113,6 +115,7 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 		const result = await run(async (trx, host) => {
 			const account = await passwordAccount(trx, body.email)
 			if (!account) throw new HttpError(410, 'code_expired')
+			checkNewPassword(body.password, signIn?.password?.minLength)
 			await spendResetCode(trx, config.secret, account.account_id, body.code).catch((error: unknown) => {
 				guesses.miss(guessKey)
 				throw error

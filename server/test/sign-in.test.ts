@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { storePassword } from '../src/core/passwords.js'
 import { claimHostIdentity } from '../src/core/sign-in.js'
 import { reset, testDb } from './support/db.js'
 import { CONFIG, testHost } from './support/host.js'
@@ -110,6 +111,43 @@ describe('sign-in methods', () => {
 		expect((await password('signin', identity(), 'ben@example.com', 'correct horse')).json().account.id).toBe(
 			made.account.id,
 		)
+	})
+
+	it('checks a password’s length only when one is set, against the host’s minimum', async () => {
+		const tooShort = { error: 'password_too_short', minLength: 8 }
+		expect((await password('register', identity(), 'ben@example.com', 'abcd')).json()).toEqual(tooShort)
+		// A short password from before the policy (or a host's import) still signs in, by either route.
+		const made = (await password('register', identity(), 'ben@example.com', 'correct horse')).json()
+		await storePassword(db, made.account.id, 'ben@example.com', 'abcd')
+		expect((await password('signin', identity(), 'ben@example.com', 'abcd')).statusCode).toBe(200)
+		expect((await password('register', identity(), 'ben@example.com', 'abcd')).statusCode).toBe(200)
+		// Setting one, by reset or change, is checked; a refused reset leaves its code usable.
+		await post('/api/accounts/v1/auth/password/forgot', { email: 'ben@example.com' })
+		const resetTo = (pw: string) =>
+			post('/api/accounts/v1/auth/password/reset', {
+				identity: identity(),
+				email: 'ben@example.com',
+				code: mailbox[0]!.code,
+				password: pw,
+			})
+		expect((await resetTo('abc')).json()).toEqual(tooShort)
+		expect((await resetTo('new horse battery')).statusCode).toBe(200)
+		const { token } = (await password('signin', identity(), 'ben@example.com', 'new horse battery')).json()
+		const set = await post(
+			'/api/accounts/v1/account/password',
+			{ email: 'ben@example.com', password: 'abc', currentPassword: 'new horse battery' },
+			bearer(token),
+		)
+		expect(set.json()).toEqual(tooShort)
+
+		// A host can lower the minimum.
+		const s = testSignIn()
+		app = await testHost(db, { signIn: { ...s.signIn, password: { ...s.signIn.password!, minLength: 4 } } })
+		expect((await password('register', identity(), 'short@example.com', 'abcd')).statusCode).toBe(200)
+		expect((await password('register', identity(), 'shorter@example.com', 'abc')).json()).toEqual({
+			error: 'password_too_short',
+			minLength: 4,
+		})
 	})
 
 	it('resets a forgotten password with a one-time code, signing every other device out', async () => {

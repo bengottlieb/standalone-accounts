@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { recordEvent } from '../core/events.js'
-import { normalizeEmail, passwordAccount, passwordMatches, storePassword } from '../core/passwords.js'
+import { checkNewPassword, normalizeEmail, passwordAccount, passwordMatches, storePassword } from '../core/passwords.js'
 import { HttpError, parse } from '../http/errors.js'
-import { jsonSchema, okBody, responses } from '../http/schema.js'
+import { jsonSchema, okBody, passwordBadRequest, responses } from '../http/schema.js'
 import { signInKinds } from '../signin/options.js'
 import { setPasswordBody, unlinkBody } from './contract.js'
 import { transactor } from '../core/transaction.js'
@@ -29,12 +29,13 @@ export function identityRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				operationId: 'setPassword',
 				security: memberSecurity,
 				body: jsonSchema(setPasswordBody),
-				response: responses(okBody, 400, 401, 404, 409),
+				response: responses(okBody, passwordBadRequest, 401, 404, 409),
 			},
 		},
 		async (request) => {
 			if (!o.signIn?.password) throw new HttpError(404, 'signin_unavailable')
 			const body = parse(setPasswordBody, request.body)
+			checkNewPassword(body.password, o.signIn.password.minLength)
 			const accountId = request.account!.id
 			await run(async (trx, host) => {
 				const current = await trx

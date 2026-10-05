@@ -10,6 +10,8 @@ export interface SignInOptions {
 	password?: {
 		/** Emails a reset code (six digits, one hour, one use). The host owns mail delivery. */
 		sendResetCode: (email: string, code: string) => Promise<void>
+		/** The shortest new password (register, reset, change); default 8. Sign-in never checks length. */
+		minLength?: number
 	}
 	gameCenter?: { verify: (proof: GameCenterProof) => Promise<string> }
 	/** Host-verified link kinds that count as a way to sign in (PZLServer: `pa`), so their accounts aren't anonymous. */

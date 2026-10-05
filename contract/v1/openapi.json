@@ -2,7 +2,7 @@
 	"openapi": "3.0.3",
 	"info": {
 		"title": "Standalone accounts v1",
-		"version": "0.2.0"
+		"version": "0.3.5"
 	},
 	"components": {
 		"securitySchemes": {
@@ -152,11 +152,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -407,11 +413,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -653,11 +665,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -894,11 +912,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -1048,11 +1072,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -1118,11 +1148,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -1190,11 +1226,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -1435,11 +1477,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -1520,8 +1568,9 @@
 									},
 									"password": {
 										"type": "string",
-										"minLength": 8,
-										"maxLength": 200
+										"minLength": 1,
+										"maxLength": 200,
+										"description": "A new password (register, reset, change) must be at least the server’s minimum (default 8), or 400 `password_too_short` with `minLength`; signing in never checks length."
 									}
 								},
 								"required": [
@@ -1683,11 +1732,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -1768,8 +1823,9 @@
 									},
 									"password": {
 										"type": "string",
-										"minLength": 8,
-										"maxLength": 200
+										"minLength": 1,
+										"maxLength": 200,
+										"description": "A new password (register, reset, change) must be at least the server’s minimum (default 8), or 400 `password_too_short` with `minLength`; signing in never checks length."
 									}
 								},
 								"required": [
@@ -1931,11 +1987,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -2020,11 +2082,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -2110,8 +2178,9 @@
 									},
 									"password": {
 										"type": "string",
-										"minLength": 8,
-										"maxLength": 200
+										"minLength": 1,
+										"maxLength": 200,
+										"description": "A new password (register, reset, change) must be at least the server’s minimum (default 8), or 400 `password_too_short` with `minLength`; signing in never checks length."
 									}
 								},
 								"required": [
@@ -2274,11 +2343,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -2549,11 +2624,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -2590,8 +2671,9 @@
 									},
 									"password": {
 										"type": "string",
-										"minLength": 8,
-										"maxLength": 200
+										"minLength": 1,
+										"maxLength": 200,
+										"description": "A new password (register, reset, change) must be at least the server’s minimum (default 8), or 400 `password_too_short` with `minLength`; signing in never checks length."
 									},
 									"currentPassword": {
 										"type": "string",
@@ -2653,11 +2735,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [
@@ -2828,11 +2916,17 @@
 												"verification_unavailable",
 												"invalid_credentials",
 												"email_in_use",
-												"signin_unavailable"
+												"signin_unavailable",
+												"password_too_short"
 											]
 										},
 										"message": {
 											"type": "string"
+										},
+										"minLength": {
+											"type": "integer",
+											"minimum": -9007199254740991,
+											"maximum": 9007199254740991
 										}
 									},
 									"required": [

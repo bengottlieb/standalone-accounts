@@ -69,6 +69,12 @@ export const limitExceededBody = z.object({
 	used: z.number().int(),
 })
 
+/** 400 from a route that sets a password: too short for the host's minimum, or a malformed request. */
+export const passwordBadRequest: [number, z.ZodType] = [
+	400,
+	z.union([z.object({ error: z.literal('password_too_short'), minLength: z.number().int() }), invalidRequestBody]),
+]
+
 const errorJson = responseSchema(errorBody)
 const sharedErrors: Record<number, Record<string, unknown>> = {
 	// A 400 is either a zod failure in the handler or a plain message (Fastify's schema validation, HttpError).

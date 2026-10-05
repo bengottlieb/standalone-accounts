@@ -70,7 +70,8 @@ export const authResponseSchema = z.object({
 })
 
 const email = z.email().max(320)
-const password = z.string().min(8).max(200)
+// Length policy is the host's (`signIn.password.minLength`), checked only when a password is set.
+const password = z.string().min(1).max(200)
 export const appleSignInBody = z.object({
 	identity: identitySchema,
 	identityToken: z.string().min(1).max(10_000),
