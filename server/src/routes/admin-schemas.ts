@@ -18,6 +18,10 @@ export const accountRow = z.object({
 	createdAt: dateTime,
 	lastSeenAt: dateTime.nullable(),
 	devices: z.number().int(),
+	email: z.string().nullable().meta({ description: 'The email it signs in with, if it has a password' }),
+	signInKinds: z
+		.array(z.string())
+		.meta({ description: 'Other ways it signs in: apple, game_center, or a host’s own kinds' }),
 })
 
 export const listQuery = z.object({

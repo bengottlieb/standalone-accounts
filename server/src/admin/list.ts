@@ -15,7 +15,10 @@ export interface ListFilters {
 	limit: number
 }
 
-/** Accounts newest first, filtered, with their device count; one extra row tells whether another page exists. */
+/**
+ * Accounts newest first, filtered, with their device count and ways to sign in; one extra row tells whether another
+ * page exists.
+ */
 export async function listAccounts(db: AcctDb, f: ListFilters) {
 	let query = db
 		.selectFrom('acct_accounts as a')
@@ -35,6 +38,14 @@ export async function listAccounts(db: AcctDb, f: ListFilters) {
 					.select(eb.fn.countAll<number>().as('n'))
 					.whereRef('c.account_id', '=', 'a.id')
 					.as('devices'),
+
+			(eb) => eb.selectFrom('acct_passwords as p').select('p.email').whereRef('p.account_id', '=', 'a.id').as('email'),
+			// Ways to sign in besides a password; an app transaction only finds the account on its own device.
+			sql<
+				string[]
+			>`ARRAY(SELECT DISTINCT l.kind FROM acct_links l WHERE l.account_id = a.id AND l.kind <> 'app_transaction' ORDER BY l.kind)`.as(
+				'sign_in_kinds',
+			),
 		])
 		.orderBy('a.created_at', 'desc')
 		.orderBy('a.id', 'desc')
@@ -70,6 +81,8 @@ export async function listAccounts(db: AcctDb, f: ListFilters) {
 			createdAt: r.created_at,
 			lastSeenAt: r.last_seen_at,
 			devices: Number(r.devices),
+			email: r.email,
+			signInKinds: r.sign_in_kinds,
 		})),
 	}
 }

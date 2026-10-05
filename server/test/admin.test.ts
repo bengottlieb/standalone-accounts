@@ -59,6 +59,21 @@ describe('admin accounts API', () => {
 		})
 	})
 
+	it('shows each listed account’s sign-in email and other ways to sign in', async () => {
+		const plain = await buy(signJws(transaction({ originalTransactionId: 'a' })))
+		const signed = await buy(signJws(transaction({ originalTransactionId: 'b' })))
+		await storePassword(db, signed.account.id, 'Ben@Example.com', 'correct horse')
+		await db
+			.insertInto('acct_links')
+			.values({ kind: 'apple', value: 'apple-sub', account_id: signed.account.id })
+			.execute()
+		const rows = (await get('/api/v1/admin/accounts')).json().accounts
+		const row = (id: string) => rows.find((r: { id: string }) => r.id === id)
+		// A purchase alone gives no way to sign in (its app transaction only finds the account on that device).
+		expect(row(plain.account.id)).toMatchObject({ email: null, signInKinds: [] })
+		expect(row(signed.account.id)).toMatchObject({ email: 'ben@example.com', signInKinds: ['apple'] })
+	})
+
 	it('finds an account by Support ID, id prefix, transaction id, Order ID and device name', async () => {
 		const { account } = await buy(
 			signJws(transaction({ originalTransactionId: '2000000000000777' })),
