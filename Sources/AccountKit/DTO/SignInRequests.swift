@@ -19,7 +19,8 @@ public struct AppleSignInRequest: Codable, Sendable, Equatable {
 public struct PasswordRequest: Codable, Sendable, Equatable {
 	public var identity: AccountIdentity
 	public var email: String
-	/// At least 8 characters.
+	/// Registering needs at least the server's minimum (`signIn.password.minLength`, default 8, else `passwordTooShort`);
+	/// signing in never checks length.
 	public var password: String
 
 	public init(identity: AccountIdentity, email: String, password: String) {
