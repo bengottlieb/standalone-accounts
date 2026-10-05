@@ -52,6 +52,16 @@ export {
 } from './signin/game-center.js'
 export { claimHostIdentity, type SignInContext } from './core/sign-in.js'
 export { isAnonymous, mergeInto } from './core/merge.js'
-export { passwordAccount, passwordMatches, storePassword, normalizeEmail } from './core/passwords.js'
+export {
+	passwordAccount,
+	passwordMatches,
+	storePassword,
+	normalizeEmail,
+	checkEmailPassword,
+	verifyAccountPassword,
+	checkNewPassword,
+	DEFAULT_MIN_PASSWORD_LENGTH,
+	type LegacyPasswordCheck,
+} from './core/passwords.js'
 export { signInKinds } from './signin/options.js'
 export type { AdminNames } from './admin/detail.js'

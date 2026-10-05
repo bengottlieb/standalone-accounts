@@ -26,8 +26,51 @@ export async function passwordAccount(db: AcctDb, email: string) {
 	return db.selectFrom('acct_passwords').selectAll().where('email', '=', normalizeEmail(email)).executeTakeFirst()
 }
 
-export async function passwordMatches(hash: string, password: string) {
-	return bcrypt.compare(password, hash)
+/** Checks a hash the host wrote before moving its passwords here (e.g. argon2); bcrypt hashes never reach it. */
+export type LegacyPasswordCheck = (hash: string, password: string) => Promise<boolean>
+
+const DUMMY_HASH = bcrypt.hash('timing-equaliser-not-a-real-password', ROUNDS)
+
+const isBcrypt = (hash: string) => /^\$2[abxy]\$/.test(hash)
+
+/** Whether `password` matches `hash`: bcrypt, or a host's legacy format through `legacy` (false without one). */
+export async function passwordMatches(hash: string, password: string, legacy?: LegacyPasswordCheck) {
+	if (isBcrypt(hash)) return bcrypt.compare(password, hash)
+	return legacy ? legacy(hash, password) : false
+}
+
+/**
+ * Checks the account's password, and on a match against a legacy hash re-saves it as bcrypt, so each imported
+ * password moves to the library's format the first time it's used.
+ */
+export async function verifyAccountPassword(
+	db: AcctDb,
+	row: { account_id: string; password_hash: string },
+	password: string,
+	legacy?: LegacyPasswordCheck,
+) {
+	if (!(await passwordMatches(row.password_hash, password, legacy))) return false
+	if (!isBcrypt(row.password_hash))
+		await db
+			.updateTable('acct_passwords')
+			.set({ password_hash: await bcrypt.hash(password, ROUNDS), updated_at: new Date() })
+			.where('account_id', '=', row.account_id)
+			.execute()
+	return true
+}
+
+/**
+ * The account an email and password sign in to, or null: for a host's own sign-in (a website) on the same
+ * accounts. No device, token or rate limit: the host brings its own session and throttling.
+ */
+export async function checkEmailPassword(db: AcctDb, email: string, password: string, legacy?: LegacyPasswordCheck) {
+	const row = await passwordAccount(db, email)
+	if (!row) {
+		// As slow as a wrong password, so timing doesn't reveal which emails have accounts.
+		await bcrypt.compare(password, await DUMMY_HASH)
+		return null
+	}
+	return (await verifyAccountPassword(db, row, password, legacy)) ? row.account_id : null
 }
 
 /** Sets the account's email and password, adding them to an account without; 409 `email_in_use` if another has it. */

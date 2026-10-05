@@ -12,6 +12,8 @@ export interface SignInOptions {
 		sendResetCode: (email: string, code: string) => Promise<void>
 		/** The shortest new password (register, reset, change); default 8. Sign-in never checks length. */
 		minLength?: number
+		/** Checks a password hash the host imported in another format (e.g. argon2); it's re-saved as bcrypt on a match. */
+		verifyLegacy?: (hash: string, password: string) => Promise<boolean>
 	}
 	gameCenter?: { verify: (proof: GameCenterProof) => Promise<string> }
 	/** Host-verified link kinds that count as a way to sign in (PZLServer: `pa`), so their accounts aren't anonymous. */

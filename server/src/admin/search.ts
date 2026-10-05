@@ -18,8 +18,9 @@ const ids = (rows: { account_id: string | null }[]) => rows.map((r) => r.account
 
 /**
  * The accounts a pasted value identifies, recognizing its shape: account id or prefix, Support ID or claim code,
- * Apple Order ID (via the App Store Server API), original transaction or app transaction id, a host device id, and
- * otherwise device names, iCloud hints and the host's fields. Returns ids, most specific match first.
+ * Apple Order ID (via the App Store Server API), original transaction or app transaction id, a host device id, a
+ * sign-in email, and otherwise device names, sign-in emails containing it, iCloud hints and the host's fields.
+ * Returns ids, most specific match first.
  */
 export async function searchAccounts(
 	db: AcctDb,
@@ -86,6 +87,10 @@ export async function searchAccounts(
 				),
 			)
 	}
+	if (q.includes('@'))
+		found.push(
+			...ids(await db.selectFrom('acct_passwords').select('account_id').where('email', '=', q.toLowerCase()).execute()),
+		)
 	if (DIGITS.test(q)) {
 		found.push(
 			...ids(
@@ -107,6 +112,11 @@ export async function searchAccounts(
 			),
 		)
 		found.push(...ids(await db.selectFrom('acct_hints').select('account_id').where('value', '=', q).execute()))
+		found.push(
+			...ids(
+				await db.selectFrom('acct_passwords').select('account_id').where('email', 'ilike', like).limit(50).execute(),
+			),
+		)
 		if (hook) found.push(...(await hook(db, q)))
 	}
 	return [...new Set(found)]

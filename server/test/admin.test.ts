@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { StoreApi } from '../src/appstore/store-api.js'
 import { effectiveAccess } from '../src/core/access.js'
 import type { AccessChange } from '../src/core/hooks.js'
+import { storePassword } from '../src/core/passwords.js'
 import { issueToken } from '../src/core/tokens.js'
 import { reset, testDb } from './support/db.js'
 import { ADMIN, CONFIG, testHost, VIEWER } from './support/host.js'
@@ -71,6 +72,10 @@ describe('admin accounts API', () => {
 		expect(await ids('/api/v1/admin/accounts?q=macbook')).toEqual([account.id])
 		apple.orders.MABC1234XY = [signJws(transaction({ originalTransactionId: '2000000000000777' }))]
 		expect(await ids('/api/v1/admin/accounts?q=MABC1234XY')).toEqual([account.id])
+		await storePassword(db, account.id, 'Ben@Example.com', 'correct horse')
+		expect(await ids('/api/v1/admin/accounts?q=ben@example.com')).toEqual([account.id])
+		expect(await ids('/api/v1/admin/accounts?q=BEN@EXAMPLE.COM')).toEqual([account.id])
+		expect(await ids('/api/v1/admin/accounts?q=example.com')).toEqual([account.id])
 	})
 
 	it('shows an account in full, one-time purchases included, without secrets', async () => {

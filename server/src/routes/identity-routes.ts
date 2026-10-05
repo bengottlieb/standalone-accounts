@@ -40,10 +40,14 @@ export function identityRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 			await run(async (trx, host) => {
 				const current = await trx
 					.selectFrom('acct_passwords')
-					.select('password_hash')
+					.select(['account_id', 'password_hash'])
 					.where('account_id', '=', accountId)
 					.executeTakeFirst()
-				if (current && !(body.currentPassword && (await passwordMatches(current.password_hash, body.currentPassword))))
+				const legacy = o.signIn?.password?.verifyLegacy
+				if (
+					current &&
+					!(body.currentPassword && (await passwordMatches(current.password_hash, body.currentPassword, legacy)))
+				)
 					throw new HttpError(401, 'invalid_credentials')
 				const owner = await passwordAccount(trx, body.email)
 				if (owner && owner.account_id !== accountId) throw new HttpError(409, 'email_in_use')

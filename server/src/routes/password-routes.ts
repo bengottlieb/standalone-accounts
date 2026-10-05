@@ -6,7 +6,7 @@ import {
 	createResetCode,
 	normalizeEmail,
 	passwordAccount,
-	passwordMatches,
+	verifyAccountPassword,
 	spendResetCode,
 	storePassword,
 } from '../core/passwords.js'
@@ -63,7 +63,7 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 		const result = await run(async (trx, host) => {
 			await lockIdentity(trx, `password:${normalizeEmail(body.email)}`)
 			const existing = await passwordAccount(trx, body.email)
-			if (existing && !(await passwordMatches(existing.password_hash, body.password))) {
+			if (existing && !(await verifyAccountPassword(trx, existing, body.password, signIn?.password?.verifyLegacy))) {
 				guesses.miss(guessKey)
 				throw register ? new HttpError(409, 'email_in_use') : new HttpError(401, 'invalid_credentials')
 			}

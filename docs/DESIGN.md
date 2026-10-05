@@ -106,7 +106,11 @@ StoreKeeper offers none; Crosswords and Peasel offer all three.
   the lowercased email and a bcrypt hash. Registering an email that has an account signs in with the right password
   and is 409 `email_in_use` otherwise. A new password (register, reset, change) must be at least the host's
   `signIn.password.minLength` (default 8), else 400 `password_too_short` with `minLength`; signing in never checks
-  length, so a password set under an older policy keeps working. A reset code (six digits, one hour, one use) is emailed by the host
+  length, so a password set under an older policy keeps working.
+  A host moving its own users onto these accounts can import their hashes in its own format: `signIn.password.
+  verifyLegacy` checks a non-bcrypt hash, and a match re-saves it as bcrypt. `checkEmailPassword` lets a host's own
+  sign-in (a website) check an email and password against the same accounts, with the same timing for unknown emails.
+  Admin search finds an account by its sign-in email. A reset code (six digits, one hour, one use) is emailed by the host
   (`signIn.password.sendResetCode`); resetting spends every open code, revokes every token and signs this device in.
 - **Game Center** (`/auth/game-center`): the identity verification signature, checked with the certificate at Apple's
   URL (not chain-verified); link kind `game_center` keyed by the team-scoped player id, the display name as label.
