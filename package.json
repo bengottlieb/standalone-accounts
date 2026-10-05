@@ -1,6 +1,6 @@
 {
 	"name": "@standalone/accounts",
-	"version": "0.3.5",
+	"version": "0.3.6",
 	"private": true,
 	"description": "Server half of the Standalone account framework; AccountKit (Swift) lives in the same repo.",
 	"type": "module",
