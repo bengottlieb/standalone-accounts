@@ -28,9 +28,14 @@ export const Access = z.strictObject({
 
 /**
  * One way to sign in to the account. `kind` is an open set: `apple`, `password`, `game_center`, or a host's own
- * (`pa`). `label` is what to show: the email for `password`, the Apple email hint if any.
+ * (`pa`). `label` is what to show: the email for `password`, the Apple email hint if any. `name` (added in 0.4.2): for
+ * `apple`, the name Apple shared on the first sign-in, if any.
  */
-export const SignInIdentity = z.strictObject({ kind: z.string().min(1), label: z.string().optional() })
+export const SignInIdentity = z.strictObject({
+	kind: z.string().min(1),
+	label: z.string().optional(),
+	name: z.string().optional(),
+})
 
 export const AccountSummary = z.strictObject({
 	id: z.uuid(),

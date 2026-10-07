@@ -132,6 +132,17 @@ export async function setLabel(db: AcctDb, accountId: string, kind: string, labe
 }
 
 /**
+ * Keeps the name a sign-in shared (Apple sends it only on the very first sign-in), so the account can show it later.
+ * A sign-in without a name leaves the kept one alone.
+ */
+export async function setName(db: AcctDb, accountId: string, kind: string, name: string | undefined) {
+	const trimmed = name?.trim()
+	if (!trimmed) return
+	await db.deleteFrom('acct_hints').where('account_id', '=', accountId).where('kind', '=', `${kind}_name`).execute()
+	await db.insertInto('acct_hints').values({ account_id: accountId, kind: `${kind}_name`, value: trimmed }).execute()
+}
+
+/**
  * A host-verified identity (PZLServer's PuzzleAnywhere login) for the signed-in `accountId`, under the same rules:
  * attached when nobody owns it; when another account does, an anonymous `accountId` is folded into it (its tokens move
  * with it, so the caller's token now opens the owner) and a signed-in one gets 409 `identity_in_use`. Run inside a

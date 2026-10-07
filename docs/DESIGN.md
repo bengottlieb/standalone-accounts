@@ -101,7 +101,8 @@ StoreKeeper offers none; Crosswords and Peasel offer all three.
 
 - **Sign in with Apple** (`/auth/apple`): the identity token is verified against Apple's keys for the server's app
   ids; link kind `apple` keyed by `sub`, the email kept as its label. The name Apple gives on first sign-in goes to the
-  host (`hooks.signedIn`).
+  host (`hooks.signedIn`) and is kept as the `apple_name` hint, returned as the identity's `name` (0.4.2); a later
+  sign-in without a name leaves it.
 - **Email and password** (`/auth/password/register|signin|forgot|reset`, `/account/password`): `acct_passwords` holds
   the lowercased email and a bcrypt hash. Registering an email that has an account signs in with the right password
   and is 409 `email_in_use` otherwise. A new password (register, reset, change) must be at least the host's

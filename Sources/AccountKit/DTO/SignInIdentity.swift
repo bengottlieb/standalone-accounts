@@ -1,6 +1,7 @@
 import Foundation
 
-/// One way to sign in to the account. `label` is what to show: the email for `password`, the Apple email hint if any.
+/// One way to sign in to the account. `label` is what to show: the email for `password`, the Apple email hint if any;
+/// `name` is the name Apple shared, for `apple`.
 ///
 /// `Kind` is an open set: a server may add its own kinds, and this build keeps them as unknown raw values.
 public struct SignInIdentity: Codable, Sendable, Equatable {
@@ -14,10 +15,13 @@ public struct SignInIdentity: Codable, Sendable, Equatable {
 
 	public var kind: Kind
 	public var label: String?
+	/// For `apple`, the name Apple shared on the first sign-in, if any (servers from 0.4.2 send it).
+	public var name: String?
 
-	public init(kind: Kind, label: String? = nil) {
+	public init(kind: Kind, label: String? = nil, name: String? = nil) {
 		self.kind = kind
 		self.label = label
+		self.name = name
 	}
 }
 

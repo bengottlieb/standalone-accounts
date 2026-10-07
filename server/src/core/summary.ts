@@ -17,13 +17,17 @@ export async function signInIdentities(db: AcctDb, accountId: string, kinds: str
 			.selectFrom('acct_hints')
 			.select(['kind', 'value'])
 			.where('account_id', '=', accountId)
-			.where('kind', 'like', '%\\_label')
+			.where((eb) => eb.or([eb('kind', 'like', '%\\_label'), eb('kind', 'like', '%\\_name')]))
 			.execute(),
 	])
-	const label = (kind: string) => labels.find((l) => l.kind === `${kind}_label`)?.value
+	const hint = (kind: string, suffix: string) => labels.find((l) => l.kind === `${kind}_${suffix}`)?.value
 	return [
 		...(password ? [{ kind: 'password', label: password.email }] : []),
-		...links.map((l) => ({ kind: l.kind, ...(label(l.kind) ? { label: label(l.kind) } : {}) })),
+		...links.map((l) => {
+			const label = hint(l.kind, 'label')
+			const name = hint(l.kind, 'name')
+			return { kind: l.kind, ...(label ? { label } : {}), ...(name ? { name } : {}) }
+		}),
 	]
 }
 

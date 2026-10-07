@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import type { z } from 'zod'
 import { verifyIdentity } from '../core/device-identity.js'
 import { lockIdentity } from '../core/identity.js'
-import { addLink, linkOwner, setLabel, signInWith } from '../core/sign-in.js'
+import { addLink, linkOwner, setLabel, setName, signInWith } from '../core/sign-in.js'
 import { HttpError, parse } from '../http/errors.js'
 import { jsonSchema, responses } from '../http/schema.js'
 import { SignInRejected } from '../signin/apple.js'
@@ -43,6 +43,8 @@ export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				email,
 			})
 			await setLabel(trx, signedIn.accountId, kind, label)
+			// Game Center's display name is already its label.
+			if (kind === 'apple') await setName(trx, signedIn.accountId, kind, name)
 			return signedIn
 		})
 		return authResponse(result.accountId, device.secretHash, device.deviceName, result.isNew, result.merged)

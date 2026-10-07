@@ -2,7 +2,7 @@
 	"openapi": "3.0.3",
 	"info": {
 		"title": "Standalone accounts v1",
-		"version": "0.3.5"
+		"version": "0.4.1"
 	},
 	"components": {
 		"securitySchemes": {
@@ -334,6 +334,9 @@
 																	},
 																	"label": {
 																		"type": "string"
+																	},
+																	"name": {
+																		"type": "string"
 																	}
 																},
 																"required": [
@@ -604,6 +607,9 @@
 															},
 															"label": {
 																"type": "string"
+															},
+															"name": {
+																"type": "string"
 															}
 														},
 														"required": [
@@ -851,6 +857,9 @@
 															},
 															"label": {
 																"type": "string"
+															},
+															"name": {
+																"type": "string"
 															}
 														},
 														"required": [
@@ -1028,6 +1037,9 @@
 														"minLength": 1
 													},
 													"label": {
+														"type": "string"
+													},
+													"name": {
 														"type": "string"
 													}
 												},
@@ -1416,6 +1428,9 @@
 															},
 															"label": {
 																"type": "string"
+															},
+															"name": {
+																"type": "string"
 															}
 														},
 														"required": [
@@ -1671,6 +1686,9 @@
 															},
 															"label": {
 																"type": "string"
+															},
+															"name": {
+																"type": "string"
 															}
 														},
 														"required": [
@@ -1925,6 +1943,9 @@
 																"minLength": 1
 															},
 															"label": {
+																"type": "string"
+															},
+															"name": {
 																"type": "string"
 															}
 														},
@@ -2282,6 +2303,9 @@
 															},
 															"label": {
 																"type": "string"
+															},
+															"name": {
+																"type": "string"
 															}
 														},
 														"required": [
@@ -2562,6 +2586,9 @@
 																"minLength": 1
 															},
 															"label": {
+																"type": "string"
+															},
+															"name": {
 																"type": "string"
 															}
 														},
@@ -2872,6 +2899,9 @@
 														"minLength": 1
 													},
 													"label": {
+														"type": "string"
+													},
+													"name": {
 														"type": "string"
 													}
 												},

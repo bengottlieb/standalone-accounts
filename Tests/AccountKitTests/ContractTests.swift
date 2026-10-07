@@ -68,6 +68,13 @@ import Testing
 		}
 	}
 
+	/// Apple shares a name only on the first sign-in; servers from 0.4.2 return it so apps can show who is signed in.
+	@Test func appleIdentityCarriesTheSharedName() throws {
+		let fixture = try ContractFixture.load(ContractFixture.directory.appending(path: "fixtures/auth-apple.named.json"))
+		let response = try AccountJSON.decoder.decode(AccountAuthResponse.self, from: fixture.body)
+		#expect(response.account.identities?.first == SignInIdentity(kind: .apple, label: "b***@privaterelay.appleid.com", name: "Ben"))
+	}
+
 	@Test func unknownAccessValuesDecode() throws {
 		let json = #"{"status":"paused","active":false,"source":"family","environment":"Staging"}"#
 		let access = try AccountJSON.decoder.decode(AccountAccess.self, from: Data(json.utf8))

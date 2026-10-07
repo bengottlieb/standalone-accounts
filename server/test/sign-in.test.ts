@@ -49,6 +49,18 @@ describe('sign-in methods', () => {
 		expect(calls).toContain(`signed in ${first.account.id} with apple`)
 	})
 
+	// Apple sends the name only on the very first sign-in; the account keeps it so apps can show who's signed in.
+	it('keeps the name Apple shared on the first sign-in, and later sign-ins without one leave it', async () => {
+		const phone = identity()
+		await launch(phone)
+		const first = (await apple(phone, 'apple-2', 'b@privaterelay.appleid.com')).json()
+		expect(first.account.identities).toEqual([{ kind: 'apple', label: 'b@privaterelay.appleid.com', name: 'Ben' }])
+		const later = (
+			await post('/api/accounts/v1/auth/apple', { identity: identity(), identityToken: appleToken('apple-2') })
+		).json()
+		expect(later.account.identities).toEqual([{ kind: 'apple', label: 'b@privaterelay.appleid.com', name: 'Ben' }])
+	})
+
 	it('folds a device’s anonymous account (and its purchase) into the account it signs in to', async () => {
 		const owner = (await apple(identity(), 'apple-2')).json().account.id
 		const phone = identity()
