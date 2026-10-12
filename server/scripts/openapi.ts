@@ -14,6 +14,8 @@ for (const [version, { endpoints, error }] of Object.entries(versions)) {
 		paths[endpoint.path]![endpoint.method] = {
 			operationId,
 			...(endpoint.bearer ? { security: [{ bearer: [] }] } : {}),
+			// OpenAPI's way of saying "a bearer, or nothing".
+			...('optionalBearer' in endpoint ? { security: [{}, { bearer: [] }] } : {}),
 			...(endpoint.request
 				? { requestBody: { required: true, content: { 'application/json': { schema: schema(endpoint.request) } } } }
 				: {}),

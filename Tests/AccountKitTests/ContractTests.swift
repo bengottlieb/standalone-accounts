@@ -64,7 +64,11 @@ import Testing
 		for endpoint in AccountEndpoint.allCases {
 			let operation = paths[endpoint.path]?[endpoint.method.rawValue.lowercased()] as? [String: Any]
 			#expect(operation?["operationId"] as? String == endpoint.rawValue, "\(endpoint) isn't \(endpoint.method.rawValue) \(endpoint.path)")
-			#expect((operation?["security"] != nil) == endpoint.requiresToken, "\(endpoint) token requirement differs")
+			// A required bearer is `[{bearer}]`; an optional one adds the empty alternative, `[{}, {bearer}]`.
+			let security = operation?["security"] as? [[String: Any]]
+			let optional = security?.contains { $0.isEmpty } ?? false
+			#expect((security != nil && !optional) == endpoint.requiresToken, "\(endpoint) token requirement differs")
+			#expect(optional == endpoint.acceptsToken, "\(endpoint) optional token differs")
 		}
 	}
 

@@ -9,9 +9,9 @@ import { SignInRejected } from '../signin/apple.js'
 import { signInKinds } from '../signin/options.js'
 import { appleSignInBody, gameCenterBody } from './contract.js'
 import { transactor } from '../core/transaction.js'
-import { tags, type AcctRouteOptions } from './options.js'
+import { optionalMemberSecurity, tags, type AcctRouteOptions } from './options.js'
 import { passwordRoutes } from './password-routes.js'
-import { responders } from './respond.js'
+import { presentedToken, responders } from './respond.js'
 
 const unavailable = () => new HttpError(404, 'signin_unavailable')
 
@@ -24,7 +24,7 @@ export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 
 	/** Verifies, then signs the device in to whoever owns (`kind`, `value`), attaching it when nobody does. */
 	async function withLink(
-		request: { body: unknown; log: FastifyInstance['log'] },
+		request: { body: unknown; log: FastifyInstance['log']; headers: { authorization?: string } },
 		body: { identity: z.infer<typeof appleSignInBody>['identity'] },
 		kind: string,
 		value: string,
@@ -47,7 +47,14 @@ export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 			if (kind === 'apple') await setName(trx, signedIn.accountId, kind, name)
 			return signedIn
 		})
-		return authResponse(result.accountId, device.secretHash, device.deviceName, result.isNew, result.merged)
+		return authResponse(
+			result.accountId,
+			device.secretHash,
+			device.deviceName,
+			result.isNew,
+			result.merged,
+			presentedToken(request),
+		)
 	}
 	const rejected = (error: unknown) => {
 		throw error instanceof SignInRejected
@@ -63,7 +70,7 @@ export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				tags,
 				summary: 'Sign in with Apple (identity token); signs this device in, folding in its anonymous account',
 				operationId: 'signInWithApple',
-				security: [],
+				security: optionalMemberSecurity,
 				body: jsonSchema(appleSignInBody),
 				response: responses(schemas.auth, 400, 401, 404, 409, 429),
 			},
@@ -84,7 +91,7 @@ export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				tags,
 				summary: 'Sign in with Game Center (identity verification signature)',
 				operationId: 'signInWithGameCenter',
-				security: [],
+				security: optionalMemberSecurity,
 				body: jsonSchema(gameCenterBody),
 				response: responses(schemas.auth, 400, 401, 404, 409, 429),
 			},

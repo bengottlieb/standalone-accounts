@@ -17,22 +17,25 @@ public struct AccountService: Sendable {
 		try await call(.checkIn, body: request, token: token)
 	}
 
+	// The `auth` calls take the device's current `token` when it has one: the server answers with that token again,
+	// rather than minting another, while it is still this device's and the account's. Keep whichever token comes back.
+
 	/// This device's account, or `.noAccount` in apps that create accounts only on a purchase or claim.
-	public func authenticateDevice(includeLinks: Bool = true) async throws -> DeviceAuthResponse {
+	public func authenticateDevice(includeLinks: Bool = true, token: String? = nil) async throws -> DeviceAuthResponse {
 		let request = DeviceAuthRequest(identity: try await identity.current(includeLinks: includeLinks))
-		return try await call(.authDevice, body: request, token: nil)
+		return try await call(.authDevice, body: request, token: token)
 	}
 
 	/// Attaches `signedTransactions` (`Transaction.jwsRepresentation`) and returns their account.
-	public func purchase(_ signedTransactions: [String]) async throws -> AccountAuthResponse {
+	public func purchase(_ signedTransactions: [String], token: String? = nil) async throws -> AccountAuthResponse {
 		let request = PurchaseAuthRequest(identity: try await identity.current(includeLinks: true), signedTransactions: signedTransactions)
-		return try await call(.authPurchase, body: request, token: nil)
+		return try await call(.authPurchase, body: request, token: token)
 	}
 
 	/// Joins the account an admin created, with the code (or the `code` of a `claim` deep link) they sent.
-	public func claim(code: String) async throws -> AccountAuthResponse {
+	public func claim(code: String, token: String? = nil) async throws -> AccountAuthResponse {
 		let request = ClaimRequest(identity: try await identity.current(includeLinks: true), code: code)
-		return try await call(.authClaim, body: request, token: nil)
+		return try await call(.authClaim, body: request, token: token)
 	}
 
 	public func account(token: String) async throws -> AccountSummary {

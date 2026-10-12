@@ -9,9 +9,9 @@ import { verifyIdentity } from '../core/device-identity.js'
 import { recordEvent } from '../core/events.js'
 import { bindDevice, findAccount, lockIdentity, type DeviceIdentity } from '../core/identity.js'
 import { purchaseRoute } from './purchase-route.js'
-import { responders } from './respond.js'
+import { presentedToken, responders } from './respond.js'
 import { transactor } from '../core/transaction.js'
-import { tags, type AcctRouteOptions, type IdentityOf } from './options.js'
+import { optionalMemberSecurity, tags, type AcctRouteOptions, type IdentityOf } from './options.js'
 
 /** `/api/accounts/v1/auth/*`: the calls that bind a device to an account by proving an identity (no token). */
 export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
@@ -28,7 +28,7 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				tags,
 				summary: `This device's account and a token for it. With ACCOUNT_CREATION=trigger an unknown device gets \`{ "account": null }\`.`,
 				operationId: 'authDevice',
-				security: [],
+				security: optionalMemberSecurity,
 				body: jsonSchema(deviceAuthBody),
 				response: responses(schemas.device, 400, 429),
 			},
@@ -45,7 +45,14 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				return { accountId, isNew: !found }
 			})
 			if (!bound) return { account: null }
-			return authResponse(bound.accountId, identity.secretHash, identity.deviceName, bound.isNew)
+			return authResponse(
+				bound.accountId,
+				identity.secretHash,
+				identity.deviceName,
+				bound.isNew,
+				false,
+				presentedToken(request),
+			)
 		},
 	)
 
@@ -59,7 +66,7 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				tags,
 				summary: 'Join the account an admin created, with its one-time claim code',
 				operationId: 'authClaim',
-				security: [],
+				security: optionalMemberSecurity,
 				body: jsonSchema(claimBody),
 				response: responses(schemas.auth, 400, 404, 409, 410, 429),
 			},
@@ -76,7 +83,7 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				await refreshAccess(trx, claimed, 'device', new Date(), o.hooks, host)
 				return claimed
 			})
-			return authResponse(accountId, identity.secretHash, identity.deviceName, false)
+			return authResponse(accountId, identity.secretHash, identity.deviceName, false, false, presentedToken(request))
 		},
 	)
 }

@@ -58,8 +58,11 @@ export async function testHost(db: AcctDb, o: HostOptions = {}): Promise<Fastify
 		const bearer = /^Bearer\s+(\S+)$/i.exec(request.headers.authorization ?? '')?.[1]
 		if (!bearer?.startsWith(config.tokenPrefix)) return
 		request.account = await resolveToken(db, config.secret, bearer)
-		if (!request.account && !request.url.startsWith('/api/accounts/v1/check-in'))
-			throw new HttpError(401, 'invalid_token')
+		// Check-in and the auth calls take a token optionally, so a stale one is ignored rather than refused.
+		const optional = ['/api/accounts/v1/check-in', '/api/accounts/v1/auth/'].some((path) =>
+			request.url.startsWith(path),
+		)
+		if (!request.account && !optional) throw new HttpError(401, 'invalid_token')
 	})
 	const admin = (request: FastifyRequest) => request.headers['x-admin'] as string | undefined
 	await registerAccountRoutes(app, {

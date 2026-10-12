@@ -43,7 +43,7 @@ export function acctAccountRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 			preHandler: signedIn,
 			schema: {
 				tags,
-				summary: `Sign this device out: revokes its token and unbinds its device secret (in first-launch apps an anonymous account is deleted). Send \`includeLinks: false\` afterwards.`,
+				summary: `Sign this device out: unbinds its device secret, and with it every token issued to it (in first-launch apps an anonymous account is deleted). Send \`includeLinks: false\` afterwards.`,
 				operationId: 'signOut',
 				security: memberSecurity,
 				response: responses(okBody, 401, 403),
@@ -56,6 +56,8 @@ export function acctAccountRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				if (o.config.creation === 'first-launch' && (await isAnonymous(trx, account.id, signInKinds(o.signIn))))
 					return deleteAccount(trx, account.id, 'device', o.hooks, host)
 				await revokeToken(trx, account.tokenId)
+				// Deleting the credential deletes every token issued to it (acct_tokens.credential_hash cascades), so a
+				// device's extra tokens die with the one it signed out with; other devices' tokens are untouched.
 				if (account.credentialHash)
 					await trx.deleteFrom('acct_device_credentials').where('secret_hash', '=', account.credentialHash).execute()
 				await recordEvent(trx, account.id, 'signed_out', 'device')

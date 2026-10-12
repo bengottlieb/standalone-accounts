@@ -10,8 +10,8 @@ import { bindDevice, findAccount, lockIdentity } from '../core/identity.js'
 import { purchaseOwner, verifyPurchases } from '../core/verify-purchases.js'
 import { applyTransaction, revokePurchase } from '../core/purchases.js'
 import { transactor } from '../core/transaction.js'
-import { tags, type AcctRouteOptions, type IdentityOf } from './options.js'
-import { responders } from './respond.js'
+import { optionalMemberSecurity, tags, type AcctRouteOptions, type IdentityOf } from './options.js'
+import { presentedToken, responders } from './respond.js'
 
 const invalidBody = z.object({ error: z.literal('transaction_invalid'), reason: z.string() })
 
@@ -34,7 +34,7 @@ export function purchaseRoute(app: FastifyInstance, o: AcctRouteOptions, identit
 					"Attach StoreKit 2 signed subscription transactions (`Transaction.jwsRepresentation`) to this device's account " +
 					'(or the account that owns them, or a new one) and get a device token. Expired subscriptions attach too.',
 				operationId: 'authPurchase',
-				security: [],
+				security: optionalMemberSecurity,
 				body: jsonSchema(purchaseAuthBody),
 				response: responses(schemas.auth, 400, 403, 409, [422, invalidBody], 429, 503),
 			},
@@ -83,7 +83,14 @@ export function purchaseRoute(app: FastifyInstance, o: AcctRouteOptions, identit
 				return { accountId, isNew: !found && !owner }
 			})
 			request.log.info({ accountId: bound.accountId, isNew: bound.isNew }, 'purchase attached')
-			return authResponse(bound.accountId, identity.secretHash, identity.deviceName, bound.isNew)
+			return authResponse(
+				bound.accountId,
+				identity.secretHash,
+				identity.deviceName,
+				bound.isNew,
+				false,
+				presentedToken(request),
+			)
 		},
 	)
 }

@@ -48,8 +48,26 @@ Every call that can bind a device sends the same identity block:
 | `POST /api/accounts/v1/auth/purchase` | identity + `signedTransactions[]` | `{ account, token, isNew }`; 409 `purchase_in_use` |
 | `POST /api/accounts/v1/auth/claim` | identity + `code` | `{ account, token, isNew }`; 409 `identity_in_use`, 410 `code_expired`, 404 `code_not_found` |
 | `GET /api/accounts/v1/account` | Bearer | `AccountSummary` |
-| `POST /api/accounts/v1/account/signout` | Bearer | revokes the token, unlinks this device's secret |
+| `POST /api/accounts/v1/account/signout` | Bearer | unlinks this device's secret, and with it every token issued to it |
 | `DELETE /api/accounts/v1/account` | Bearer | hard delete (below) |
+
+**Token reuse (0.5.0).** Every `auth/*` call that answers with a token (not `password/forgot`) also takes the device's
+current token as an optional bearer. The server answers with that same token, instead of issuing another, when it is
+live, was issued to the device secret in the identity block, and already belongs to the account the call answers with
+(a merge moves tokens with the account they fold into, so the token survives one). Anything else (no bearer, a revoked
+or unknown token, another device's or another account's) is ignored, never refused: the caller gets a new token, and
+the presented one is left as it was. Without a bearer the call behaves as before, so older clients mint a token per
+call. A host's auth hook must therefore let a stale bearer through on `/api/accounts/v1/auth/*`, as on check-in.
+AccountKit's `auth` methods take the token as `token:`; the app passes the one it holds.
+
+**Tokens and sign-out.** A token issued by an `auth/*` call carries the device's `credential_hash`; deleting the
+device credential deletes its tokens (the foreign key cascades). Sign-out deletes the credential, so every token the
+device was ever issued dies with the one it signed out with, and other devices' tokens are untouched. A token issued
+without a credential (host code calling `issueToken` directly) belongs to no device and only dies itself.
+Future work: once clients send their token, consider one live token per device credential (an `auth/*` call
+revoking the device's other tokens); doing it now would revoke the token an older client keeps. Before tying tokens
+to a credential, check whether two apps share a device secret through a keychain access group and the same keychain
+item (they would then share one credential).
 
 `AccountSummary` is `{ id, supportID, createdAt, access: { status, active, plan?, source?, environment?, expiresAt?,
 willRenew? } }`; `status` is one of active, grace, granted, expired, revoked, suspended, none.

@@ -74,6 +74,32 @@ export async function issueToken(
 	})
 }
 
+/**
+ * `token` again, when it can stand for one issued now (an `/auth/*` caller's current bearer): live, issued to this
+ * device credential and already the account's (a merge moves tokens with their account). Records the use and the
+ * device's name; null for anything else, which is left alone.
+ */
+export async function reusableToken(
+	db: AcctDb,
+	config: AcctConfig,
+	token: string,
+	accountId: string,
+	credentialHash: string,
+	deviceName: string | null,
+) {
+	if (!token.startsWith(config.tokenPrefix)) return null
+	const row = await db
+		.updateTable('acct_tokens')
+		.set({ last_used_at: new Date(), device_name: deviceName })
+		.where('token_hash', '=', keyedHash(config.secret, token))
+		.where('account_id', '=', accountId)
+		.where('credential_hash', '=', credentialHash)
+		.where('revoked_at', 'is', null)
+		.returning('id')
+		.executeTakeFirst()
+	return row ? token : null
+}
+
 /** Resolves a presented token to its account, recording use (on the token and the account) at most once a minute. */
 export async function resolveToken(db: AcctDb, secret: string, token: string): Promise<MemberAccount | null> {
 	const row = await db

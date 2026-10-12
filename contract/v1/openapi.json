@@ -2,7 +2,7 @@
 	"openapi": "3.0.3",
 	"info": {
 		"title": "Standalone accounts v1",
-		"version": "0.4.1"
+		"version": "0.4.2"
 	},
 	"components": {
 		"securitySchemes": {
@@ -16,6 +16,12 @@
 		"/api/accounts/v1/check-in": {
 			"post": {
 				"operationId": "checkIn",
+				"security": [
+					{},
+					{
+						"bearer": []
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -179,6 +185,12 @@
 		"/api/accounts/v1/auth/device": {
 			"post": {
 				"operationId": "authDevice",
+				"security": [
+					{},
+					{
+						"bearer": []
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -443,6 +455,12 @@
 		"/api/accounts/v1/auth/purchase": {
 			"post": {
 				"operationId": "authPurchase",
+				"security": [
+					{},
+					{
+						"bearer": []
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -698,6 +716,12 @@
 		"/api/accounts/v1/auth/claim": {
 			"post": {
 				"operationId": "authClaim",
+				"security": [
+					{},
+					{
+						"bearer": []
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1265,6 +1289,12 @@
 		"/api/accounts/v1/auth/apple": {
 			"post": {
 				"operationId": "signInWithApple",
+				"security": [
+					{},
+					{
+						"bearer": []
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1519,6 +1549,12 @@
 		"/api/accounts/v1/auth/password/register": {
 			"post": {
 				"operationId": "registerPassword",
+				"security": [
+					{},
+					{
+						"bearer": []
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1777,6 +1813,12 @@
 		"/api/accounts/v1/auth/password/signin": {
 			"post": {
 				"operationId": "signInWithPassword",
+				"security": [
+					{},
+					{
+						"bearer": []
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -2130,6 +2172,12 @@
 		"/api/accounts/v1/auth/password/reset": {
 			"post": {
 				"operationId": "resetPassword",
+				"security": [
+					{},
+					{
+						"bearer": []
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -2394,6 +2442,12 @@
 		"/api/accounts/v1/auth/game-center": {
 			"post": {
 				"operationId": "signInWithGameCenter",
+				"security": [
+					{},
+					{
+						"bearer": []
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {

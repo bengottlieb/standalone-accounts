@@ -47,8 +47,18 @@ public enum AccountEndpoint: String, CaseIterable, Sendable {
 		}
 	}
 
-	/// Whether the call needs this device's bearer token. The `auth` calls prove identity with the device secret instead;
-	/// `checkIn` sends the token when there is one.
+	/// Whether the call takes this device's bearer token when it has one, without needing it: `checkIn` records the build
+	/// against the device, and the `auth` calls answer with the same token rather than a new one.
+	public var acceptsToken: Bool {
+		switch self {
+		case .checkIn, .authDevice, .authPurchase, .authClaim: true
+		case .signInWithApple, .registerPassword, .signInWithPassword, .resetPassword, .signInWithGameCenter: true
+		case .forgotPassword: false
+		case .account, .signOut, .deleteAccount, .setPassword, .unlinkIdentity: false
+		}
+	}
+
+	/// Whether the call needs this device's bearer token. The `auth` calls prove identity with the device secret instead.
 	public var requiresToken: Bool {
 		switch self {
 		case .checkIn, .authDevice, .authPurchase, .authClaim: false

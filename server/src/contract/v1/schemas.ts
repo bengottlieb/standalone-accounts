@@ -128,6 +128,11 @@ export const SetPasswordRequest = z.strictObject({
 /** Removes one way of signing in (`apple`, `game_center`, …) from the signed-in account. */
 export const UnlinkRequest = z.strictObject({ kind: z.string().min(1).max(50) })
 
+/**
+ * `token` is this device's bearer for the account. A caller that sent its current token as the bearer (added in 0.5.0)
+ * gets that token back while it is live, issued to this device secret and already the account's; anyone else gets a
+ * new one. Keep whichever comes back.
+ */
 export const AuthResponse = z.strictObject({
 	account: AccountSummary,
 	token: z.string().min(1),

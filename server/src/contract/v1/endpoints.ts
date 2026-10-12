@@ -4,8 +4,14 @@ import * as s from './schemas.js'
 type Endpoint = {
 	method: 'get' | 'post' | 'delete'
 	path: string
-	/** Requires the device's bearer token (`checkIn` takes one optionally). */
+	/** Requires the device's bearer token. */
 	bearer: boolean
+	/**
+	 * Takes the device's bearer token when it has one, and works without it: `checkIn` records the build against the
+	 * device; the `auth` calls answer with that token again, rather than a new one, while it is still this device's
+	 * (same device secret) and the account's. A stale token is ignored, never refused.
+	 */
+	optionalBearer?: true
 	request: z.ZodType | null
 	response: z.ZodType
 }
@@ -16,6 +22,7 @@ export const endpoints = {
 		method: 'post',
 		path: '/api/accounts/v1/check-in',
 		bearer: false,
+		optionalBearer: true,
 		request: s.CheckInRequest,
 		response: s.CheckInResponse,
 	},
@@ -23,6 +30,7 @@ export const endpoints = {
 		method: 'post',
 		path: '/api/accounts/v1/auth/device',
 		bearer: false,
+		optionalBearer: true,
 		request: s.DeviceAuthRequest,
 		response: s.DeviceAuthResponse,
 	},
@@ -30,6 +38,7 @@ export const endpoints = {
 		method: 'post',
 		path: '/api/accounts/v1/auth/purchase',
 		bearer: false,
+		optionalBearer: true,
 		request: s.PurchaseAuthRequest,
 		response: s.AuthResponse,
 	},
@@ -37,6 +46,7 @@ export const endpoints = {
 		method: 'post',
 		path: '/api/accounts/v1/auth/claim',
 		bearer: false,
+		optionalBearer: true,
 		request: s.ClaimRequest,
 		response: s.AuthResponse,
 	},
@@ -59,6 +69,7 @@ export const endpoints = {
 		method: 'post',
 		path: '/api/accounts/v1/auth/apple',
 		bearer: false,
+		optionalBearer: true,
 		request: s.AppleSignInRequest,
 		response: s.AuthResponse,
 	},
@@ -66,6 +77,7 @@ export const endpoints = {
 		method: 'post',
 		path: '/api/accounts/v1/auth/password/register',
 		bearer: false,
+		optionalBearer: true,
 		request: s.PasswordRequest,
 		response: s.AuthResponse,
 	},
@@ -73,6 +85,7 @@ export const endpoints = {
 		method: 'post',
 		path: '/api/accounts/v1/auth/password/signin',
 		bearer: false,
+		optionalBearer: true,
 		request: s.PasswordRequest,
 		response: s.AuthResponse,
 	},
@@ -87,6 +100,7 @@ export const endpoints = {
 		method: 'post',
 		path: '/api/accounts/v1/auth/password/reset',
 		bearer: false,
+		optionalBearer: true,
 		request: s.ResetPasswordRequest,
 		response: s.AuthResponse,
 	},
@@ -94,6 +108,7 @@ export const endpoints = {
 		method: 'post',
 		path: '/api/accounts/v1/auth/game-center',
 		bearer: false,
+		optionalBearer: true,
 		request: s.GameCenterSignInRequest,
 		response: s.AuthResponse,
 	},

@@ -17,8 +17,8 @@ import { HttpError, parse } from '../http/errors.js'
 import { jsonSchema, okBody, passwordBadRequest, responses } from '../http/schema.js'
 import { forgotPasswordBody, passwordBody, resetPasswordBody } from './contract.js'
 import { transactor } from '../core/transaction.js'
-import { tags, type AcctRouteOptions } from './options.js'
-import { responders } from './respond.js'
+import { optionalMemberSecurity, tags, type AcctRouteOptions } from './options.js'
+import { presentedToken, responders } from './respond.js'
 
 /** Email and password: register (or sign in with the right password), sign in, forgot, reset. */
 export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: SignInContext) {
@@ -43,7 +43,7 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 				tags,
 				summary,
 				operationId,
-				security: [],
+				security: ok === okBody ? [] : optionalMemberSecurity,
 				body: jsonSchema(body),
 				response: responses(ok, passwordBadRequest, 401, 404, 409, 410, 429),
 			},
@@ -54,7 +54,10 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 	const guesses = guessLimiter()
 
 	/** Signs the device in to the email's account, or attaches the email to the device's account. */
-	async function signInByEmail(request: { body: unknown; log: FastifyInstance['log']; ip: string }, register: boolean) {
+	async function signInByEmail(
+		request: { body: unknown; log: FastifyInstance['log']; ip: string; headers: { authorization?: string } },
+		register: boolean,
+	) {
 		available()
 		const body = parse(passwordBody, request.body)
 		const guessKey = `${request.ip}|${normalizeEmail(body.email)}`
@@ -77,7 +80,14 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 				{ method: 'password', email: normalizeEmail(body.email), password: body.password },
 			)
 		})
-		return authResponse(result.accountId, device.secretHash, device.deviceName, result.isNew, result.merged)
+		return authResponse(
+			result.accountId,
+			device.secretHash,
+			device.deviceName,
+			result.isNew,
+			result.merged,
+			presentedToken(request),
+		)
 	}
 
 	const register = route(
@@ -128,6 +138,13 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 				email: account.email,
 			})
 		})
-		return authResponse(result.accountId, device.secretHash, device.deviceName, result.isNew, result.merged)
+		return authResponse(
+			result.accountId,
+			device.secretHash,
+			device.deviceName,
+			result.isNew,
+			result.merged,
+			presentedToken(request),
+		)
 	})
 }

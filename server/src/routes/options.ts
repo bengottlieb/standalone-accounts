@@ -31,6 +31,8 @@ export interface AcctRouteOptions {
 
 export const tags = ['account']
 export const memberSecurity = [{ memberToken: [] }]
+/** The `/auth/*` calls: no token needed, but the caller's current one is reused when it is still this device's. */
+export const optionalMemberSecurity = [{}, { memberToken: [] }]
 
 /** Verifies a request's identity block. */
 export type IdentityOf = (body: { identity: IdentityBody }, log: FastifyBaseLogger) => Promise<DeviceIdentity>
