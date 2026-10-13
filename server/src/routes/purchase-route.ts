@@ -78,9 +78,9 @@ export function purchaseRoute(app: FastifyInstance, o: AcctRouteOptions, identit
 							environment: p.tx.environment,
 						})
 				}
-				await bindDevice(trx, accountId, identity)
+				const linkResults = await bindDevice(trx, accountId, identity)
 				await refreshAccess(trx, accountId, 'device', new Date(), o.hooks, host)
-				return { accountId, isNew: !found && !owner }
+				return { accountId, isNew: !found && !owner, linkResults }
 			})
 			request.log.info({ accountId: bound.accountId, isNew: bound.isNew }, 'purchase attached')
 			return authResponse(
@@ -90,6 +90,7 @@ export function purchaseRoute(app: FastifyInstance, o: AcctRouteOptions, identit
 				bound.isNew,
 				false,
 				presentedToken(request),
+				bound.linkResults,
 			)
 		},
 	)

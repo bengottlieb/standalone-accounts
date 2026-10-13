@@ -8,16 +8,20 @@ public struct AccountSummary: Codable, Sendable, Equatable, Identifiable {
 	public var access: AccountAccess
 	/// How the account can be signed in to; empty for an anonymous (device-only) account.
 	public var identities: [SignInIdentity]?
+	/// Every kind of verified link the account holds, once each; nil from a server older than 0.6.0. Says whether the
+	/// account has an app transaction at all, not whether it is this device's: `AccountAuthResponse.linkResults` says that.
+	public var links: [AccountLink]?
 
-	public init(id: UUID, supportID: String, createdAt: Date, access: AccountAccess, identities: [SignInIdentity]? = nil) {
+	public init(id: UUID, supportID: String, createdAt: Date, access: AccountAccess, identities: [SignInIdentity]? = nil, links: [AccountLink]? = nil) {
 		self.id = id
 		self.supportID = supportID
 		self.createdAt = createdAt
 		self.access = access
 		self.identities = identities
+		self.links = links
 	}
 
-	private enum CodingKeys: String, CodingKey { case id, supportID, createdAt, access, identities }
+	private enum CodingKeys: String, CodingKey { case id, supportID, createdAt, access, identities, links }
 
 	/// The id is written in lowercase, as the server sends it (Swift's `UUID` encodes uppercase), so a cached summary is
 	/// byte-for-byte the wire format.
@@ -28,6 +32,7 @@ public struct AccountSummary: Codable, Sendable, Equatable, Identifiable {
 		try container.encode(createdAt, forKey: .createdAt)
 		try container.encode(access, forKey: .access)
 		try container.encodeIfPresent(identities, forKey: .identities)
+		try container.encodeIfPresent(links, forKey: .links)
 	}
 }
 

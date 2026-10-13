@@ -1,5 +1,6 @@
 import { accountSummarySchema, authResponseSchema, deviceAuthResponseSchema } from './contract.js'
 import { accountSummary } from '../core/summary.js'
+import type { LinkResults } from '../core/identity.js'
 import { issueToken, reusableToken } from '../core/tokens.js'
 import { signInKinds } from '../signin/options.js'
 import type { AcctRouteOptions } from './options.js'
@@ -21,7 +22,8 @@ export function responders({ db, config, extras, signIn }: AcctRouteOptions) {
 
 	/**
 	 * The auth response with this device's token for the account: the `presented` bearer when it is live, this device's
-	 * (same credential) and already the account's, else a newly issued one. Call after the binding committed.
+	 * (same credential) and already the account's, else a newly issued one, plus `linkResults` when the device sent a
+	 * link. Call after the binding committed.
 	 */
 	async function authResponse(
 		accountId: string,
@@ -30,11 +32,18 @@ export function responders({ db, config, extras, signIn }: AcctRouteOptions) {
 		isNew: boolean,
 		merged = false,
 		presented: string | null = null,
+		linkResults: LinkResults = {},
 	) {
 		const token =
 			(presented && (await reusableToken(db, config, presented, accountId, credentialHash, deviceName))) ||
 			(await issueToken(db, config, accountId, deviceName, credentialHash)).token
-		return { account: await summary(accountId), token, isNew, ...(merged ? { merged } : {}) }
+		return {
+			account: await summary(accountId),
+			token,
+			isNew,
+			...(merged ? { merged } : {}),
+			...(Object.keys(linkResults).length ? { linkResults } : {}),
+		}
 	}
 
 	return { schemas, summary, authResponse }

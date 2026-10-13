@@ -5,7 +5,14 @@ import { createAccount } from './accounts.js'
 import { refreshAccess } from './access.js'
 import { recordEvent } from './events.js'
 import type { AcctHooks, SignInProfile } from './hooks.js'
-import { appTransactionOwner, bindDevice, findAccount, lockIdentity, type DeviceIdentity } from './identity.js'
+import {
+	appTransactionOwner,
+	bindDevice,
+	findAccount,
+	lockIdentity,
+	type DeviceIdentity,
+	type LinkResults,
+} from './identity.js'
 import { isAnonymous, mergeInto } from './merge.js'
 
 export interface SignInContext {
@@ -22,6 +29,8 @@ export interface SignInResult {
 	accountId: string
 	isNew: boolean
 	merged: boolean
+	/** What became of the links the device sent (`bindDevice`). */
+	linkResults: LinkResults
 }
 
 /**
@@ -68,11 +77,11 @@ export async function signInWith(
 		isNew = !current
 		await attach(accountId)
 	}
-	await bindDevice(ctx.db, accountId, device)
+	const linkResults = await bindDevice(ctx.db, accountId, device)
 	await recordEvent(ctx.db, accountId, 'signed_in', 'device', { method: profile.method })
 	await ctx.hooks?.signedIn?.(ctx.db, accountId, { ...profile, isNew }, ctx.host)
 	await refreshAccess(ctx.db, accountId, 'device', new Date(), ctx.hooks, ctx.host)
-	return { accountId, isNew, merged } satisfies SignInResult
+	return { accountId, isNew, merged, linkResults } satisfies SignInResult
 }
 
 /**

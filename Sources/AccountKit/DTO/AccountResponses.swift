@@ -7,12 +7,21 @@ public struct AccountAuthResponse: Codable, Sendable, Equatable {
 	public var isNew: Bool
 	/// True when signing in folded this device's anonymous account into the one signed in to: reload local data.
 	public var merged: Bool?
+	/// What became of each link the identity block sent, keyed by link kind (`app_transaction`); nil when it sent none,
+	/// or from a server older than 0.6.0. `linkResult(for:)` reads it by kind.
+	public var linkResults: [String: LinkOutcome]?
 
-	public init(account: AccountSummary, token: String, isNew: Bool, merged: Bool? = nil) {
+	public init(account: AccountSummary, token: String, isNew: Bool, merged: Bool? = nil, linkResults: [String: LinkOutcome]? = nil) {
 		self.account = account
 		self.token = token
 		self.isNew = isNew
 		self.merged = merged
+		self.linkResults = linkResults
+	}
+
+	/// What became of the link of this kind the device sent; nil when it sent none or the server doesn't say.
+	public func linkResult(for kind: AccountLink.Kind) -> LinkOutcome? {
+		linkResults?[kind.rawValue]
 	}
 }
 

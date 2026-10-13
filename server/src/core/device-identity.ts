@@ -7,7 +7,8 @@ import type { DeviceIdentity } from './identity.js'
 /**
  * Turns a request's identity block into a `DeviceIdentity`: the secret hashed, and the app transaction verified
  * against Apple's chain. An app transaction that doesn't verify, or that the device withheld (`includeLinks: false`
- * after a sign-out), is dropped rather than failing the request: the device secret still works.
+ * after a sign-out), is dropped rather than failing the request: the device secret still works. A dropped one that the
+ * device did send is marked `appTransactionRejected`, so the reply can say so.
  */
 export async function verifyIdentity(
 	verifier: AppStoreVerifier,
@@ -16,20 +17,24 @@ export async function verifyIdentity(
 	log: FastifyBaseLogger,
 ): Promise<DeviceIdentity> {
 	let appTransactionId: string | null = null
+	let appTransactionRejected = false
 	if (body.includeLinks && body.appTransactionJWS) {
 		try {
 			appTransactionId = (await verifier.appTransaction(body.appTransactionJWS)).appTransactionId ?? null
+			appTransactionRejected = !appTransactionId
 		} catch (error) {
 			if (!(error instanceof SignedDataInvalid) && !(error instanceof VerificationUnavailable)) throw error
 			log.info(
 				{ reason: error instanceof SignedDataInvalid ? error.reason : 'unavailable' },
 				'ignoring unverifiable app transaction',
 			)
+			appTransactionRejected = true
 		}
 	}
 	return {
 		secretHash: keyedHash(secret, body.deviceSecret),
 		appTransactionId,
+		appTransactionRejected,
 		icloudUserID: body.includeLinks ? (body.icloudUserID ?? null) : null,
 		platform: body.platform,
 		appVersion: body.appVersion,

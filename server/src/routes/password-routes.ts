@@ -87,6 +87,7 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 			result.isNew,
 			result.merged,
 			presentedToken(request),
+			result.linkResults,
 		)
 	}
 
@@ -145,6 +146,7 @@ export function passwordRoutes(app: FastifyInstance, o: AcctRouteOptions, ctx: S
 			result.isNew,
 			result.merged,
 			presentedToken(request),
+			result.linkResults,
 		)
 	})
 }

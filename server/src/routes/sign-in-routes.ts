@@ -54,6 +54,7 @@ export function signInRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 			result.isNew,
 			result.merged,
 			presentedToken(request),
+			result.linkResults,
 		)
 	}
 	const rejected = (error: unknown) => {

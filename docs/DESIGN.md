@@ -21,7 +21,7 @@ Settled 2026-09-28. First users: StoreKeeper (AppOutlet server) and Peasel + Cro
 | `app_transaction` | `AppTransaction.jwsRepresentation` → `appTransactionId` | Apple JWS chain | yes (2nd) | per Apple Account per app, every download, survives reinstall |
 | `original_transaction` | a subscription/purchase JWS → `originalTransactionId` | Apple JWS chain | yes (3rd) | also attaches the purchase |
 | `apple_id` / `game_center` | Sign in with Apple / Game Center | verified by host plugin | yes | optional, per app (Peasel); SIWA is per team, so it joins apps on one server |
-| `icloud_user` | CloudKit user record name | **no** | **never** | stored as a support/admin hint only |
+| `icloud_user` | CloudKit user record name | **no** | **never** | stored as a support/admin hint only; never in `links` or `linkResults` |
 
 Lookup precedence: known device secret → verified `app_transaction` → verified `original_transaction` → none.
 A secret that points at X while the app transaction points at Y keeps the device in X and logs the conflict.
@@ -44,7 +44,7 @@ Every call that can bind a device sends the same identity block:
 | Call | Auth | Result |
 |---|---|---|
 | `POST /api/accounts/v1/check-in` | none (bearer optional) | `{ update, minimumBuild, recommendedBuild?, message?, serverTime, protocolVersions, config }` |
-| `POST /api/accounts/v1/auth/device` | identity | `{ account, token, isNew }`, or `{ account: null }` (200) for an unknown device in `trigger` mode |
+| `POST /api/accounts/v1/auth/device` | identity | `{ account, token, isNew, linkResults? }`, or `{ account: null }` (200) for an unknown device in `trigger` mode |
 | `POST /api/accounts/v1/auth/purchase` | identity + `signedTransactions[]` | `{ account, token, isNew }`; 409 `purchase_in_use` |
 | `POST /api/accounts/v1/auth/claim` | identity + `code` | `{ account, token, isNew }`; 409 `identity_in_use`, 410 `code_expired`, 404 `code_not_found` |
 | `GET /api/accounts/v1/account` | Bearer | `AccountSummary` |
@@ -70,7 +70,28 @@ to a credential, check whether two apps share a device secret through a keychain
 item (they would then share one credential).
 
 `AccountSummary` is `{ id, supportID, createdAt, access: { status, active, plan?, source?, environment?, expiresAt?,
-willRenew? } }`; `status` is one of active, grace, granted, expired, revoked, suspended, none.
+willRenew? }, identities?, links? }`; `status` is one of active, grace, granted, expired, revoked, suspended, none.
+
+**Links and link results (0.6.0).** A device can't otherwise tell whether the app transaction it sent landed: one that
+doesn't verify is dropped without failing the call, and one another account owns stays there (a `link_conflict`
+event, not an error). So, additively within v1:
+
+- `AccountSummary.links` lists every kind of verified link the account holds (`acct_links`), once each, in code-point
+  order: `[{ "kind": "app_transaction" }, { "kind": "apple" }]`. Kinds only, never a transaction id or other value.
+  Sign-in kinds appear here as well as in `identities`. Unverified hints (`icloud_user`, and the `*_label`/`*_name`
+  hints) live in `acct_hints` and are **left out** rather than listed as `verified: false`: they never find an account,
+  so listing them would only invite a client to rely on them. `[]` for an account with no links. It says whether the
+  account has an app transaction at all, not whether it is the calling device's.
+- Every `auth/*` reply that binds the device (device, purchase, claim, apple, game-center, password register, signin
+  and reset) carries `linkResults`, keyed by link kind, for each link the identity block sent with `includeLinks:
+  true`, and leaves it out when there were none (no `appTransactionJWS`, or `includeLinks: false`):
+  `bound` (this call added it to the account), `already_bound` (it was the account's already), `owned_by_other_account`
+  (another account keeps it, the device is bound anyway; sending it again won't change that) or `rejected` (it did not
+  verify, or verification was unavailable, and was dropped; worth sending again later). A claim (strict) still answers
+  409 `identity_in_use` rather than `owned_by_other_account`. `{ account: null }` from a `trigger`-mode `auth/device`
+  carries no results: nothing was bound. Outcomes are an open set; clients keep ones they don't know.
+- AccountKit: `AccountSummary.links: [AccountLink]?`, `AccountAuthResponse.linkResults: [String: LinkOutcome]?` and
+  `linkResult(for:)`; both nil from an older server.
 
 Errors are `{ "error": "<code>", "message"?: "…" }`; clients keep unknown codes rather than failing to decode.
 

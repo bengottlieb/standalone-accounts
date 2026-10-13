@@ -41,8 +41,8 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				if (!found && config.creation === 'trigger') return null
 				const accountId =
 					found?.accountId ?? (await createAccount(trx, config, 'device', 'first-launch', o.hooks, host)).id
-				await bindDevice(trx, accountId, identity)
-				return { accountId, isNew: !found }
+				const linkResults = await bindDevice(trx, accountId, identity)
+				return { accountId, isNew: !found, linkResults }
 			})
 			if (!bound) return { account: null }
 			return authResponse(
@@ -52,6 +52,7 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 				bound.isNew,
 				false,
 				presentedToken(request),
+				bound.linkResults,
 			)
 		},
 	)
@@ -74,16 +75,24 @@ export function acctAuthRoutes(app: FastifyInstance, o: AcctRouteOptions) {
 		async (request) => {
 			const body = parse(claimBody, request.body)
 			const identity: DeviceIdentity = await identityOf(body, request.log)
-			const accountId = await run(async (trx, host) => {
+			const { accountId, linkResults } = await run(async (trx, host) => {
 				const claimed = await redeemClaimCode(trx, config, body.code)
 				const found = await findAccount(trx, identity)
 				if (found && found.accountId !== claimed) throw new HttpError(409, 'identity_in_use')
-				await bindDevice(trx, claimed, identity, { strict: true })
+				const linkResults = await bindDevice(trx, claimed, identity, { strict: true })
 				await recordEvent(trx, claimed, 'claimed', 'device', { platform: identity.platform })
 				await refreshAccess(trx, claimed, 'device', new Date(), o.hooks, host)
-				return claimed
+				return { accountId: claimed, linkResults }
 			})
-			return authResponse(accountId, identity.secretHash, identity.deviceName, false, false, presentedToken(request))
+			return authResponse(
+				accountId,
+				identity.secretHash,
+				identity.deviceName,
+				false,
+				false,
+				presentedToken(request),
+				linkResults,
+			)
 		},
 	)
 }

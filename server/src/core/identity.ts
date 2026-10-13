@@ -8,6 +8,8 @@ export interface DeviceIdentity {
 	secretHash: string
 	/** Verified `appTransactionId`; null when absent, unverifiable, or the device sent `includeLinks: false`. */
 	appTransactionId: string | null
+	/** True when the device sent an app transaction (with `includeLinks`) that did not verify, so it was dropped. */
+	appTransactionRejected?: boolean
 	/** Unverified hint: stored for admins, never used to find an account. */
 	icloudUserID: string | null
 	platform: string
@@ -44,10 +46,19 @@ export async function findAccount(
 }
 
 /**
+ * What became of a link the device sent (docs/DESIGN.md "Link results"): `bound` to the account by this call,
+ * `already_bound` to it before, left with the account that owns it (`owned_by_other_account`), or `rejected` because it
+ * did not verify.
+ */
+export type LinkOutcome = 'bound' | 'already_bound' | 'owned_by_other_account' | 'rejected'
+/** Outcomes keyed by link kind, for the links the device sent; empty when it sent none (or `includeLinks: false`). */
+export type LinkResults = Partial<Record<'app_transaction', LinkOutcome>>
+
+/**
  * Binds the device to `accountId`: its credential, its app transaction link (when no other account owns it) and its
  * iCloud hint. A credential or, with `strict` (claim codes), an app transaction owned by another account is a 409
- * `identity_in_use`; otherwise another account's app transaction is left alone and logged as a conflict. Run inside a
- * transaction.
+ * `identity_in_use`; otherwise another account's app transaction is left alone and logged as a conflict. Answers what
+ * became of each link the device sent. Run inside a transaction.
  */
 export async function bindDevice(
 	db: AcctDb,
@@ -55,7 +66,7 @@ export async function bindDevice(
 	identity: DeviceIdentity,
 	{ strict = false } = {},
 	now = new Date(),
-) {
+): Promise<LinkResults> {
 	const credential = await db
 		.insertInto('acct_device_credentials')
 		.values({
@@ -83,17 +94,20 @@ export async function bindDevice(
 			deviceName: identity.deviceName,
 		})
 
+	const results: LinkResults = {}
+	if (identity.appTransactionRejected) results.app_transaction = 'rejected'
 	if (identity.appTransactionId) {
 		const link = await db
 			.insertInto('acct_links')
 			.values({ kind: 'app_transaction', value: identity.appTransactionId, account_id: accountId })
 			.onConflict((oc) => oc.columns(['kind', 'value']).doUpdateSet({ last_seen_at: now }))
-			.returning('account_id')
+			.returning(['account_id', sql<boolean>`xmax = 0`.as('inserted')])
 			.executeTakeFirstOrThrow()
 		if (link.account_id !== accountId) {
 			if (strict) throw new HttpError(409, 'identity_in_use')
 			await recordEvent(db, accountId, 'link_conflict', 'device', { kind: 'app_transaction', ownedBy: link.account_id })
-		}
+			results.app_transaction = 'owned_by_other_account'
+		} else results.app_transaction = link.inserted ? 'bound' : 'already_bound'
 	}
 	if (identity.icloudUserID) {
 		await db
@@ -102,6 +116,7 @@ export async function bindDevice(
 			.onConflict((oc) => oc.columns(['account_id', 'kind', 'value']).doUpdateSet({ last_seen_at: now }))
 			.execute()
 	}
+	return results
 }
 
 /** Whether the device's app transaction belongs to an account other than `accountId`. */

@@ -37,6 +37,13 @@ export const SignInIdentity = z.strictObject({
 	name: z.string().optional(),
 })
 
+/**
+ * A kind of verified link the account holds (added in 0.6.0). `kind` is an open set: `app_transaction`, `apple`,
+ * `game_center`, or a host's own (`pa`). Kinds only, never the link's value; unverified hints (`icloud_user`) are never
+ * listed.
+ */
+export const AccountLink = z.strictObject({ kind: z.string().min(1) })
+
 export const AccountSummary = z.strictObject({
 	id: z.uuid(),
 	supportID: z.string().regex(/^[A-Z]{2}-[0-9A-Z]{4}-[0-9A-Z]{4}$/),
@@ -44,6 +51,11 @@ export const AccountSummary = z.strictObject({
 	access: Access,
 	/** How the account can be signed in to; empty for an anonymous (device-only) account. */
 	identities: z.array(SignInIdentity).optional(),
+	/**
+	 * Every kind of verified link the account holds, once each (added in 0.6.0; older servers leave it out). Says whether
+	 * the account has an `app_transaction` at all, not whether it is this device's: `linkResults` says that.
+	 */
+	links: z.array(AccountLink).optional(),
 })
 
 /**
@@ -129,6 +141,13 @@ export const SetPasswordRequest = z.strictObject({
 export const UnlinkRequest = z.strictObject({ kind: z.string().min(1).max(50) })
 
 /**
+ * What became of a link the device sent (added in 0.6.0): `bound` to the account by this call, `already_bound` to it
+ * before, `owned_by_other_account` (left with the account that owns it; the device is bound anyway), or `rejected` (it
+ * did not verify, or verification was unavailable; sending it again later may work).
+ */
+export const LinkOutcome = z.enum(['bound', 'already_bound', 'owned_by_other_account', 'rejected'])
+
+/**
  * `token` is this device's bearer for the account. A caller that sent its current token as the bearer (added in 0.5.0)
  * gets that token back while it is live, issued to this device secret and already the account's; anyone else gets a
  * new one. Keep whichever comes back.
@@ -139,6 +158,11 @@ export const AuthResponse = z.strictObject({
 	isNew: z.boolean(),
 	/** True when signing in folded this device's anonymous account into the one signed in to: reload local data. */
 	merged: z.boolean().optional(),
+	/**
+	 * Keyed by link kind (`app_transaction`), for each link the identity block sent with `includeLinks: true` (added in
+	 * 0.6.0); left out when it sent none. Hints (`icloudUserID`) are not links and get no result.
+	 */
+	linkResults: z.record(z.string(), LinkOutcome).optional(),
 })
 /** `/auth/device` alone may answer `{ account: null }`: an unknown device in `trigger` mode. */
 export const DeviceAuthResponse = z.union([AuthResponse, z.strictObject({ account: z.null() })])
@@ -172,4 +196,6 @@ export type Identity = z.infer<typeof Identity>
 export type Access = z.infer<typeof Access>
 export type AccountSummary = z.infer<typeof AccountSummary>
 export type AuthResponse = z.infer<typeof AuthResponse>
+export type AccountLink = z.infer<typeof AccountLink>
+export type LinkOutcome = z.infer<typeof LinkOutcome>
 export type ErrorCode = z.infer<typeof ErrorCode>

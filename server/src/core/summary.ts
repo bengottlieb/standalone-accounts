@@ -31,6 +31,19 @@ export async function signInIdentities(db: AcctDb, accountId: string, kinds: str
 	]
 }
 
+/**
+ * The kinds of verified link the account holds (`app_transaction`, `apple`, `game_center`, a host's own), once each:
+ * kinds only, never their values. Unverified hints (`icloud_user`) live in `acct_hints` and are never listed.
+ */
+export async function linkKinds(db: AcctDb, accountId: string) {
+	const rows = await db.selectFrom('acct_links').select('kind').distinct().where('account_id', '=', accountId).execute()
+	// Sorted here, in code-point order, rather than by the database's collation.
+	return rows
+		.map((r) => r.kind)
+		.sort()
+		.map((kind) => ({ kind }))
+}
+
 /** The account as its devices see it (docs/DESIGN.md "Protocol"). Dates stay `Date`s; Fastify serializes them. */
 export async function accountSummary(db: AcctDb, accountId: string, kinds: string[] = ['apple', 'game_center']) {
 	const a = await db.selectFrom('acct_accounts').selectAll().where('id', '=', accountId).executeTakeFirstOrThrow()
@@ -43,6 +56,13 @@ export async function accountSummary(db: AcctDb, accountId: string, kinds: strin
 		...(a.access_expires_at ? { expiresAt: a.access_expires_at } : {}),
 		...(a.access_will_renew !== null ? { willRenew: a.access_will_renew } : {}),
 	}
-	const identities = await signInIdentities(db, accountId, kinds)
-	return { id: a.id, supportID: a.support_id, createdAt: a.created_at, access, identities } as unknown as AccountSummary
+	const [identities, links] = await Promise.all([signInIdentities(db, accountId, kinds), linkKinds(db, accountId)])
+	return {
+		id: a.id,
+		supportID: a.support_id,
+		createdAt: a.created_at,
+		access,
+		identities,
+		links,
+	} as unknown as AccountSummary
 }

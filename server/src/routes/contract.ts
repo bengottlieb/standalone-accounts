@@ -53,12 +53,15 @@ export const accessSchema = z.object({
 
 export const signInIdentitySchema = z.object({ kind: z.string(), label: z.string().optional() })
 
+export const accountLinkSchema = z.object({ kind: z.string() })
+
 export const accountSummarySchema = z.object({
 	id: z.string().meta({ format: 'uuid' }),
 	supportID: z.string(),
 	createdAt: dateTime,
 	access: accessSchema,
 	identities: z.array(signInIdentitySchema),
+	links: z.array(accountLinkSchema).optional(),
 })
 export type AccountSummary = z.infer<typeof accountSummarySchema>
 
@@ -67,6 +70,9 @@ export const authResponseSchema = z.object({
 	token: z.string(),
 	isNew: z.boolean(),
 	merged: z.boolean().optional(),
+	linkResults: z
+		.record(z.string(), z.enum(['bound', 'already_bound', 'owned_by_other_account', 'rejected']))
+		.optional(),
 })
 
 const email = z.email().max(320)
