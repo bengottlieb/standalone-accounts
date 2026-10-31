@@ -9,6 +9,7 @@ import { acctAdminRoutes } from './admin-routes.js'
 import { acctAuthRoutes } from './auth-routes.js'
 import { signInRoutes } from './sign-in-routes.js'
 import { checkInRoute, type CheckInOptions } from './check-in-route.js'
+import { supportAssertionRoute } from './support-route.js'
 import type { AcctAdminOptions, AcctRouteOptions } from './options.js'
 
 /**
@@ -23,7 +24,8 @@ function ownScope(scope: FastifyInstance) {
 }
 
 /**
- * Mounts the device-facing protocol (`/api/accounts/v1/…`: check-in, auth, account) in its own scope, so its error
+ * Mounts the device-facing protocol (`/api/accounts/v1/…`: check-in, auth, account), plus AppSupport's assertion when
+ * configured, in its own scope, so its error
  * bodies follow the contract whatever the host's error handler does. The host's hooks still run first: its auth hook
  * must set `request.account` from `resolveToken` for tokens starting with `config.tokenPrefix`.
  */
@@ -37,6 +39,7 @@ export async function registerAccountRoutes(
 		signInRoutes(scope, options)
 		acctAccountRoutes(scope, options)
 		checkInRoute(scope, options, options.checkIn)
+		if (options.supportAssertion) await supportAssertionRoute(scope, options.supportAssertion)
 	})
 }
 

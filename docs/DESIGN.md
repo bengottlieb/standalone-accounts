@@ -188,6 +188,11 @@ Gated by the host's admin users (viewer = read-only).
 - Now: a Support ID (`SK-XXXX-XXXX`, derived from the account id, or the device id without an account) shown in the
   app with a copy button; "Contact Support" opens a prefilled email with the Support ID, version, OS, platform,
   environment and access; admin support notes and a ticket link per account.
+- AppSupport (in-app feedback, its own server): with `registerAccountRoutes({ supportAssertion: { appId, privateKey,
+  keyId } })` a host serves `POST /api/v1/support/assertion` (bearer), answering `{ assertion, expiresAt }`: a
+  five-minute ES256 JWT with `kid`, `iss` = the AppSupport app id, `aud` = `appsupport`, `sub` = the account id, `jti`.
+  Anonymous accounts get one too. The contract of record is AppSupport's `docs/DESIGN.md` ("Assertion contract"), not
+  `contract/`; without the option the route isn't registered.
 - Goal (later): in-app conversations — `POST /api/accounts/v1/support/threads`, `…/messages`, replies by push, admin inbox.
 
 ## Deletion

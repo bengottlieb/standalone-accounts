@@ -11,6 +11,7 @@ import type { DeviceIdentity } from '../core/identity.js'
 import type { AcctHooks } from '../core/hooks.js'
 import type { HostTransaction } from '../core/transaction.js'
 import type { SignInOptions } from '../signin/options.js'
+import type { SupportAssertionOptions } from './support-route.js'
 
 /** What the host hands the account routes. */
 export interface AcctRouteOptions {
@@ -27,6 +28,8 @@ export interface AcctRouteOptions {
 	transaction?: HostTransaction
 	/** Which sign-in methods this server offers; the rest answer 404 `signin_unavailable`. */
 	signIn?: SignInOptions
+	/** AppSupport's signing key; without it `POST /api/v1/support/assertion` isn't registered (answers 404). */
+	supportAssertion?: SupportAssertionOptions
 }
 
 export const tags = ['account']

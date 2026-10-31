@@ -12,6 +12,7 @@ export { migrateAccounts, ACCT_MIGRATIONS_DIR } from './db/migrate.js'
 export type { AcctConfig } from './core/config.js'
 export { registerAccountRoutes, registerAccountAdminRoutes } from './routes/register.js'
 export type { AcctRouteOptions, AcctAdminOptions } from './routes/options.js'
+export type { SupportAssertionOptions } from './routes/support-route.js'
 export type { BuildPolicy, CheckInOptions } from './routes/check-in-route.js'
 export { acctErrorHandler, HttpError } from './http/errors.js'
 

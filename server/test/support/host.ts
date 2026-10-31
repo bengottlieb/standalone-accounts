@@ -10,6 +10,7 @@ import type { CheckInOptions } from '../../src/routes/check-in-route.js'
 import type { AcctHooks } from '../../src/core/hooks.js'
 import type { HostTransaction } from '../../src/core/transaction.js'
 import type { SignInOptions } from '../../src/signin/options.js'
+import type { SupportAssertionOptions } from '../../src/routes/support-route.js'
 import { BUNDLE_ID, TEST_APP_APPLE_ID, testRoot } from './storekit.js'
 
 export const TEST_SECRET = 'x'.repeat(32)
@@ -44,6 +45,7 @@ export interface HostOptions {
 	signIn?: SignInOptions
 	hooks?: AcctHooks
 	transaction?: HostTransaction
+	supportAssertion?: SupportAssertionOptions
 }
 
 /**
@@ -73,6 +75,7 @@ export async function testHost(db: AcctDb, o: HostOptions = {}): Promise<Fastify
 		signIn: o.signIn,
 		hooks: o.hooks,
 		transaction: o.transaction,
+		supportAssertion: o.supportAssertion,
 		checkIn: { protocolVersions: ['v1'], builds: () => null, ...o.checkIn },
 	})
 	await registerAccountAdminRoutes(app, {
