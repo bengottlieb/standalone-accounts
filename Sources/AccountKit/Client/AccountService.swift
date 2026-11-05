@@ -52,6 +52,11 @@ public struct AccountService: Sendable {
 		let _: AccountOKResponse = try await call(.deleteAccount, body: Optional<DeviceAuthRequest>.none, token: token)
 	}
 
+	/// A five-minute assertion of this account for AppSupport. A server with no AppSupport key answers 404.
+	public func supportAssertion(token: String) async throws -> SupportAssertionResponse {
+		try await call(.supportAssertion, body: Optional<DeviceAuthRequest>.none, token: token)
+	}
+
 	func call<Body: Encodable, Response: Decodable>(_ endpoint: AccountEndpoint, body: Body?, token: String?) async throws -> Response {
 		if endpoint.requiresToken, token == nil { throw AccountServiceError.notSignedIn }
 		let data = try body.map { try AccountJSON.encoder.encode($0) }

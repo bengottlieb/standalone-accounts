@@ -1,0 +1,11 @@
+{
+	"endpoint": "supportAssertion",
+	"request": null,
+	"response": {
+		"status": 200,
+		"body": {
+			"assertion": "eyJhbGciOiJFUzI1NiIsImtpZCI6InB6bC0yMDI2LTEwIn0.e30.sig",
+			"expiresAt": "2026-11-05T19:09:11Z"
+		}
+	}
+}

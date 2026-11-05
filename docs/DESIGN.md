@@ -191,8 +191,8 @@ Gated by the host's admin users (viewer = read-only).
 - AppSupport (in-app feedback, its own server): with `registerAccountRoutes({ supportAssertion: { appId, privateKey,
   keyId } })` a host serves `POST /api/v1/support/assertion` (bearer), answering `{ assertion, expiresAt }`: a
   five-minute ES256 JWT with `kid`, `iss` = the AppSupport app id, `aud` = `appsupport`, `sub` = the account id, `jti`.
-  Anonymous accounts get one too. The contract of record is AppSupport's `docs/DESIGN.md` ("Assertion contract"), not
-  `contract/`; without the option the route isn't registered.
+  Anonymous accounts get one too. `contract/` holds the call (`supportAssertion`); the token's claims are AppSupport's
+  `docs/DESIGN.md` ("Assertion contract"). Without the option the route isn't registered.
 - Goal (later): in-app conversations — `POST /api/accounts/v1/support/threads`, `…/messages`, replies by push, admin inbox.
 
 ## Deletion

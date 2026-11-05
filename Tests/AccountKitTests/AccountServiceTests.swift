@@ -67,6 +67,16 @@ final class StubTransport: AccountTransport {
 		let (endpoint, _, token) = try #require(transport.sent.withLock { $0.first })
 		#expect(endpoint == .checkIn && token == "skm_x")
 		#expect(AccountEndpoint.checkIn.path == "/api/accounts/v1/check-in")
-		#expect(AccountEndpoint.allCases.allSatisfy { $0.path.hasPrefix("/api/accounts/\(AccountEndpoint.protocolVersion)/") })
+		#expect(AccountEndpoint.allCases.filter { $0 != .supportAssertion }.allSatisfy { $0.path.hasPrefix("/api/accounts/\(AccountEndpoint.protocolVersion)/") })
+	}
+
+	@Test func asksForASupportAssertionWithTheToken() async throws {
+		// The server's dates carry fractional seconds.
+		let transport = StubTransport(body: #"{"assertion":"a.b.c","expiresAt":"2026-11-05T19:09:11.000Z"}"#)
+		let answer = try await service(transport).supportAssertion(token: "skm_x")
+		#expect(answer.assertion == "a.b.c")
+		let (endpoint, body, token) = try #require(transport.sent.withLock { $0.first })
+		#expect(endpoint == .supportAssertion && body == nil && token == "skm_x")
+		#expect(AccountEndpoint.supportAssertion.path == "/api/v1/support/assertion")
 	}
 }

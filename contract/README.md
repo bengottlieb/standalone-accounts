@@ -1,7 +1,8 @@
 # Contract
 
 The wire protocol between AccountKit and servers built on `@standalone/accounts`, one directory per major version
-(`v1/` ↔ `/api/accounts/v1/…`). Each holds `openapi.json` (generated: `npm run contract:openapi`) and `fixtures/*.json`, one
+(`v1/` ↔ `/api/accounts/v1/…`, plus `POST /api/v1/support/assertion`, whose path and token AppSupport's contract fixes
+and which only hosts with an AppSupport key serve; the rest answer 404). Each holds `openapi.json` (generated: `npm run contract:openapi`) and `fixtures/*.json`, one
 request/response pair per case. Both test suites check every version a server still serves.
 
 ## Rules

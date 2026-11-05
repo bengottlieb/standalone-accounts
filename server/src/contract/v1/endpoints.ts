@@ -126,6 +126,14 @@ export const endpoints = {
 		request: s.UnlinkRequest,
 		response: s.AccountSummary,
 	},
+	/** The one path outside `/api/accounts/`, fixed by AppSupport's contract. Only hosts with a key serve it (else 404). */
+	supportAssertion: {
+		method: 'post',
+		path: '/api/v1/support/assertion',
+		bearer: true,
+		request: null,
+		response: s.SupportAssertionResponse,
+	},
 } as const satisfies Record<string, Endpoint>
 
 export type EndpointName = keyof typeof endpoints

@@ -5,7 +5,7 @@ import Foundation
 public enum AccountEndpoint: String, CaseIterable, Sendable {
 	case checkIn, authDevice, authPurchase, authClaim, account, signOut, deleteAccount
 	case signInWithApple, registerPassword, signInWithPassword, forgotPassword, resetPassword, signInWithGameCenter
-	case setPassword, unlinkIdentity
+	case setPassword, unlinkIdentity, supportAssertion
 
 	/// The protocol version this build speaks. Servers keep serving it after they add newer ones (`contract/README.md`).
 	public static let protocolVersion = "v1"
@@ -18,14 +18,19 @@ public enum AccountEndpoint: String, CaseIterable, Sendable {
 		switch self {
 		case .checkIn, .authDevice, .authPurchase, .authClaim, .signOut: .post
 		case .signInWithApple, .registerPassword, .signInWithPassword, .forgotPassword, .resetPassword, .signInWithGameCenter: .post
-		case .setPassword, .unlinkIdentity: .post
+		case .setPassword, .unlinkIdentity, .supportAssertion: .post
 		case .account: .get
 		case .deleteAccount: .delete
 		}
 	}
 
 	public var path: String {
-		"/api/accounts/\(Self.protocolVersion)" + relativePath
+		root + relativePath
+	}
+
+	/// Every call lives under `/api/accounts/`, but for the path AppSupport's contract fixed.
+	private var root: String {
+		self == .supportAssertion ? "/api/\(Self.protocolVersion)" : "/api/accounts/\(Self.protocolVersion)"
 	}
 
 	var relativePath: String {
@@ -44,6 +49,7 @@ public enum AccountEndpoint: String, CaseIterable, Sendable {
 		case .signInWithGameCenter: "/auth/game-center"
 		case .setPassword: "/account/password"
 		case .unlinkIdentity: "/account/unlink"
+		case .supportAssertion: "/support/assertion"
 		}
 	}
 
@@ -54,7 +60,7 @@ public enum AccountEndpoint: String, CaseIterable, Sendable {
 		case .checkIn, .authDevice, .authPurchase, .authClaim: true
 		case .signInWithApple, .registerPassword, .signInWithPassword, .resetPassword, .signInWithGameCenter: true
 		case .forgotPassword: false
-		case .account, .signOut, .deleteAccount, .setPassword, .unlinkIdentity: false
+		case .account, .signOut, .deleteAccount, .setPassword, .unlinkIdentity, .supportAssertion: false
 		}
 	}
 
@@ -63,7 +69,7 @@ public enum AccountEndpoint: String, CaseIterable, Sendable {
 		switch self {
 		case .checkIn, .authDevice, .authPurchase, .authClaim: false
 		case .signInWithApple, .registerPassword, .signInWithPassword, .forgotPassword, .resetPassword, .signInWithGameCenter: false
-		case .account, .signOut, .deleteAccount, .setPassword, .unlinkIdentity: true
+		case .account, .signOut, .deleteAccount, .setPassword, .unlinkIdentity, .supportAssertion: true
 		}
 	}
 }

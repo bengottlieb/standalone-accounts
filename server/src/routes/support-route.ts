@@ -39,7 +39,7 @@ export async function supportAssertionRoute(app: FastifyInstance, o: SupportAsse
 			},
 		},
 		async (request) => {
-			if (!request.account) throw new HttpError(401, 'Not signed in')
+			if (!request.account) throw new HttpError(401, 'unauthorized')
 			const issuedAt = Math.floor(Date.now() / 1000)
 			const expiresAt = issuedAt + LIFETIME_SECONDS
 			const assertion = await new SignJWT()

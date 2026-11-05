@@ -167,6 +167,8 @@ export const AuthResponse = z.strictObject({
 /** `/auth/device` alone may answer `{ account: null }`: an unknown device in `trigger` mode. */
 export const DeviceAuthResponse = z.union([AuthResponse, z.strictObject({ account: z.null() })])
 export const OKResponse = z.strictObject({ ok: z.literal(true) })
+/** `assertion` is a compact JWS for AppSupport; its claims are AppSupport's contract, not this one. */
+export const SupportAssertionResponse = z.strictObject({ assertion: z.string(), expiresAt: z.iso.datetime() })
 
 export const ErrorCode = z.enum([
 	'invalid_request',

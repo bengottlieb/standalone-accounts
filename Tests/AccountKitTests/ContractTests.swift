@@ -24,7 +24,7 @@ import Testing
 
 	func checkRequest(_ fixture: ContractFixture, _ endpoint: AccountEndpoint) throws {
 		guard let request = fixture.request else {
-			#expect([.account, .signOut, .deleteAccount].contains(endpoint))
+			#expect([.account, .signOut, .deleteAccount, .supportAssertion].contains(endpoint))
 			return
 		}
 		let encoded: Data = switch endpoint {
@@ -39,7 +39,7 @@ import Testing
 		case .signInWithGameCenter: try roundTrip(GameCenterSignInRequest.self, request)
 		case .setPassword: try roundTrip(SetPasswordRequest.self, request)
 		case .unlinkIdentity: try roundTrip(UnlinkRequest.self, request)
-		case .account, .signOut, .deleteAccount: Data()
+		case .account, .signOut, .deleteAccount, .supportAssertion: Data()
 		}
 		#expect(try sameJSON(encoded, request), "\(fixture.name) request changed in a round trip")
 	}
@@ -51,6 +51,7 @@ import Testing
 		case .authPurchase, .authClaim, .signInWithApple, .registerPassword, .signInWithPassword, .resetPassword, .signInWithGameCenter: try roundTrip(AccountAuthResponse.self, fixture.body)
 		case .account, .unlinkIdentity: try roundTrip(AccountSummary.self, fixture.body)
 		case .signOut, .deleteAccount, .forgotPassword, .setPassword: try roundTrip(AccountOKResponse.self, fixture.body)
+		case .supportAssertion: try roundTrip(SupportAssertionResponse.self, fixture.body)
 		}
 		#expect(try sameJSON(encoded, fixture.body), "\(fixture.name) response changed in a round trip")
 	}

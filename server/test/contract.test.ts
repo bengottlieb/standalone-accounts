@@ -24,9 +24,11 @@ describe.each(Object.entries(versions))('contract %s', (version, { endpoints, er
 		expect([...covered].sort()).toEqual(Object.keys(endpoints).sort())
 	})
 
-	it('serves every endpoint under /api/accounts/<version>/', () => {
-		for (const endpoint of Object.values(endpoints))
-			expect(endpoint.path.startsWith(`/api/accounts/${version}/`)).toBe(true)
+	it('serves every endpoint under /api/accounts/<version>/, but for the path AppSupport fixed', () => {
+		for (const [name, endpoint] of Object.entries(endpoints))
+			expect(
+				endpoint.path.startsWith(name === 'supportAssertion' ? `/api/${version}/` : `/api/accounts/${version}/`),
+			).toBe(true)
 	})
 
 	it.each(fixtures)('%s matches its endpoint', (_, fixture) => {

@@ -1,0 +1,10 @@
+{
+	"endpoint": "supportAssertion",
+	"request": null,
+	"response": {
+		"status": 401,
+		"body": {
+			"error": "unauthorized"
+		}
+	}
+}
